@@ -8,82 +8,140 @@ import {
   BookOpenCheck, 
   Home, 
   Users, 
+  DollarSign,
   MessageSquareShare, 
   FileUp, 
   Settings,
-  Sparkles,
-  Layers
+  ChevronDown,
+  Building2,
+  Sparkles
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
 
-  const navigation = [
+  const operationsNav = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Kalendar & Planner", href: "/calendar", icon: CalendarDays },
-    { name: "Pengurusan Tempahan", href: "/bookings", icon: BookOpenCheck },
-    { name: "Unit Homestay", href: "/properties", icon: Home },
-    { name: "Direktori Tetamu", href: "/guests", icon: Users },
+    { name: "Reservations", href: "/bookings", icon: BookOpenCheck, badge: "8" },
+    { name: "Calendar Matrix", href: "/calendar", icon: CalendarDays },
+    { name: "Rooms & Units", href: "/properties", icon: Home, badge: "3" },
+    { name: "Guests", href: "/guests", icon: Users },
+  ];
+
+  const intelligenceNav = [
     { name: "WhatsApp & Invois", href: "/whatsapp", icon: MessageSquareShare },
-    { name: "Import Data", href: "/import", icon: FileUp },
-    { name: "Tetapan", href: "/settings", icon: Settings },
+    { name: "Data Migration", href: "/import", icon: FileUp },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
-    <aside className="w-64 bg-[#0A0D14] text-slate-200 min-h-screen flex flex-col border-r border-slate-800/80 shrink-0">
+    <aside className="w-64 bg-[#0B0F19] text-slate-300 min-h-screen flex flex-col border-r border-slate-800/60 shrink-0 select-none">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800/60 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-600/30">
-          🏡
-        </div>
+      <div className="p-6 pb-4 border-b border-slate-800/60 space-y-3">
         <div>
-          <div className="flex items-center gap-1.5">
-            <h1 className="font-extrabold text-white text-sm tracking-tight">DAMAI ERP</h1>
-            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase">
-              PRO
-            </span>
+          <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase block">
+            HOSPITALITY SUITE
+          </span>
+          <h1 className="text-xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
+            StayVault
+            <span className="text-[10px] font-normal text-slate-500 font-mono">v3.1</span>
+          </h1>
+          <p className="text-[11px] text-slate-400">Property Management ERP</p>
+        </div>
+
+        {/* Property Selector Card (Matching Image) */}
+        <div className="p-2.5 rounded-xl bg-[#111726] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-slate-700 transition">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-sm">
+              🏡
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white truncate max-w-[120px]">
+                Damai Homestay
+              </div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60">
+                  BOUTIQUE · 3 ROOMS
+                </span>
+              </div>
+            </div>
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">Family Homestay Suite</p>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 font-extrabold"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/70"
-              }`}
-            >
-              <div className={`p-1 rounded-lg ${isActive ? "text-white" : "text-slate-400 group-hover:text-blue-400"}`}>
+      {/* Navigation Sections */}
+      <div className="flex-1 p-4 space-y-6 overflow-y-auto text-xs">
+        {/* Operations */}
+        <div className="space-y-1">
+          <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider px-3 pb-1 block">
+            OPERATIONS
+          </span>
+          {operationsNav.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold transition-all duration-150 ${
+                  isActive
+                    ? "bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </div>
+                {item.badge && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                    isActive 
+                      ? "bg-white/20 text-white" 
+                      : item.badge === "3" ? "bg-teal-950 text-teal-300 border border-teal-800/60" : "bg-indigo-950 text-indigo-300 border border-indigo-800/60"
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Intelligence */}
+        <div className="space-y-1">
+          <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider px-3 pb-1 block">
+            INTELLIGENCE
+          </span>
+          {intelligenceNav.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold transition-all ${
+                  isActive
+                    ? "bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                }`}
+              >
                 <Icon className="w-4 h-4" />
-              </div>
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800/60">
-        <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-            M
-          </div>
-          <div className="truncate">
-            <div className="text-xs font-bold text-white truncate">Admin Homestay</div>
-            <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              Cloud Online
-            </div>
-          </div>
+      <div className="p-4 border-t border-slate-800/60 text-xs">
+        <div className="flex items-center justify-between text-slate-400">
+          <span>RM0 Oracle VPS</span>
+          <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live Online
+          </span>
         </div>
       </div>
     </aside>

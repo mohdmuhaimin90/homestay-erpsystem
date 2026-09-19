@@ -4,33 +4,40 @@
 
 @layer base {
   :root {
-    --background: #f1f5f9;
-    --foreground: #090d16;
+    --background: #080b11;
+    --foreground: #f8fafc;
   }
 
   body {
-    background-color: #f1f5f9;
-    color: #0f172a;
+    background-color: #080b11;
+    color: #f8fafc;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 }
 
+/* StayVault Dark Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #080b11;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #1e2638;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #2e3a54;
 }
 
-.card-shadow {
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+/* Glowing helpers */
+.glow-card {
+  background: #0d121d;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.glow-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15);
 }
