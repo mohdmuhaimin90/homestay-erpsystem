@@ -16,7 +16,9 @@ import {
   MessageCircle,
   Sparkles,
   ArrowUpRight,
-  MoreVertical
+  MoreVertical,
+  Heart,
+  PlusCircle
 } from "lucide-react";
 import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
@@ -27,6 +29,7 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [chartPeriod, setChartPeriod] = useState<"month" | "quarter" | "year">("month");
   const [loading, setLoading] = useState(true);
+  const [uiMode, setUiMode] = useState<"EZ" | "PRO">("PRO");
 
   useEffect(() => {
     async function loadData() {
@@ -36,6 +39,18 @@ export default function DashboardPage() {
       setLoading(false);
     }
     loadData();
+
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("damai_ui_mode") as "EZ" | "PRO";
+      if (saved) setUiMode(saved);
+
+      const handler = () => {
+        const current = (localStorage.getItem("damai_ui_mode") as "EZ" | "PRO") || "PRO";
+        setUiMode(current);
+      };
+      window.addEventListener("ui_mode_change", handler);
+      return () => window.removeEventListener("ui_mode_change", handler);
+    }
   }, []);
 
   const todayStr = new Date().toISOString().split("T")[0];
@@ -60,6 +75,260 @@ export default function DashboardPage() {
   const pDirect = Math.round((directCount / totalChannels) * 100);
   const pBooking = Math.round((bookingComCount / totalChannels) * 100);
   const pAirbnb = 100 - pDirect - pBooking;
+
+  const getCheckInWhatsAppMessage = (b: Booking) => {
+    const propName = b.property?.name || "Homestay Damai";
+    const guestName = b.guest?.name || "Tuan/Puan";
+    const lockCode = b.property?.smartlock_code || "1234#";
+    const wifi = b.property?.wifi_ssid || "Homestay_WiFi";
+    const wifiPass = b.property?.wifi_password || "12345678";
+    return `Salam sejahtera ${guestName},\n\nSelamat datang ke ${propName}! 🏡\n\nBerikut adalah maklumat kemasukan (Check-in):\n🕒 Waktu Check-in: 3:00 Petang\n🔑 Kod Pintu Smartlock: ${lockCode}\n📶 WiFi: ${wifi} (Password: ${wifiPass})\n📍 Lokasi: ${b.property?.address || "Homestay Damai"}\n\nSekiranya ada apa-apa pertanyaan semasa penginapan, sila hubungi kami di talian ini. Selamat bercuti!`;
+  };
+
+  const getCheckOutWhatsAppMessage = (b: Booking) => {
+    const propName = b.property?.name || "Homestay Damai";
+    const guestName = b.guest?.name || "Tuan/Puan";
+    return `Salam sejahtera ${guestName},\n\nTerima kasih kerana memilih ${propName} untuk percutian anda sekeluarga! ❤️\n\nKami berharap anda berpuas hati sepanjang penginapan. Sekiranya kunci sudah diletakkan di tempat asal dan suis elektrik dipadamkan, deposit keselamatan anda sebanyak RM ${b.deposit_amount || 100} akan dipulangkan sebentar lagi.\n\nJumpa lagi di lain masa!`;
+  };
+
+  if (uiMode === "EZ") {
+    return (
+      <div className="space-y-8 pb-16 max-w-5xl mx-auto">
+        {/* Warm Welcome Banner */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#141A29] via-[#0E1524] to-[#121826] border border-amber-500/30 shadow-2xl relative overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider uppercase border border-amber-500/40 mb-3">
+                <Heart className="w-3.5 h-3.5 fill-current text-amber-400" />
+                <span>MOD EZ · KHAS UNTUK IBU BAPA</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Salam Sejahtera Mak & Ayah! 🏡
+              </h1>
+              <p className="text-base text-slate-300 mt-2 max-w-xl font-medium">
+                Pusat kawalan homestay yang mudah. Tekan butang hijau untuk terus hantar kunci & alamat ke WhatsApp tetamu.
+              </p>
+            </div>
+
+            <Link
+              href="/bookings/new"
+              className="px-6 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base shadow-xl shadow-amber-500/20 transition-all hover:scale-105 flex items-center gap-3 shrink-0"
+            >
+              <PlusCircle className="w-6 h-6" />
+              <span>+ Daftar Tetamu Baru</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 2 Big Action Sections: Check-In & Check-Out Today */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Box 1: Tetamu Masuk Hari Ini */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-emerald-500/30 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-xl shadow-lg">
+                  🛎️
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white">Tetamu Masuk Hari Ini</h2>
+                  <p className="text-xs text-slate-400">Tarikh: {formatDate(todayStr)}</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 font-black text-sm border border-emerald-800/60">
+                {todayCheckIns.length} Tetamu
+              </span>
+            </div>
+
+            {todayCheckIns.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
+                <p className="text-sm font-bold text-slate-300">Tiada tetamu baru masuk hari ini.</p>
+                <p className="text-xs text-slate-400">Semua bilik yang berpenghuni sedang berjalan seperti biasa.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {todayCheckIns.map((b) => (
+                  <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-lg font-black text-white">{b.guest?.name || "Tetamu"}</div>
+                        <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
+                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-mono">
+                          <Phone className="w-3.5 h-3.5" /> {b.guest?.phone || "-"}
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800">
+                        {formatCurrency(b.total_price)}
+                      </span>
+                    </div>
+
+                    {b.guest?.phone && (
+                      <a
+                        href={generateWhatsAppUrl(b.guest.phone, getCheckInWhatsAppMessage(b))}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02]"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        <span>Hantar Kod Pintu & Alamat ke WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Box 2: Tetamu Keluar Hari Ini */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-rose-500/30 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xl shadow-lg">
+                  🚪
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white">Tetamu Keluar Hari Ini</h2>
+                  <p className="text-xs text-slate-400">Check-out sebelum 12:00 tengah hari</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-xl bg-rose-950 text-rose-400 font-black text-sm border border-rose-800/60">
+                {todayCheckOuts.length} Tetamu
+              </span>
+            </div>
+
+            {todayCheckOuts.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
+                <p className="text-sm font-bold text-slate-300">Tiada tetamu keluar hari ini.</p>
+                <p className="text-xs text-slate-400">Tiada keperluan untuk pembersihan bilik serta-merta hari ini.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {todayCheckOuts.map((b) => (
+                  <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-lg font-black text-white">{b.guest?.name || "Tetamu"}</div>
+                        <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
+                        <div className="text-xs text-slate-400 mt-1">Deposit Perlu Pulang: RM {b.deposit_amount || 100}</div>
+                      </div>
+                      <span className="text-xs font-black text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-800">
+                        Check-out
+                      </span>
+                    </div>
+
+                    {b.guest?.phone && (
+                      <a
+                        href={generateWhatsAppUrl(b.guest.phone, getCheckOutWhatsAppMessage(b))}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-sm flex items-center justify-center gap-2 border border-slate-700 transition"
+                      >
+                        <MessageCircle className="w-5 h-5 text-emerald-400" />
+                        <span>Hantar WhatsApp Terima Kasih & Deposit</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 3: Status Bilik Hari Ini (Kosong atau Ada Orang) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <span>🛌 Status Bilik Homestay Hari Ini</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Tengok rumah mana yang kosong dan boleh disewakan kepada orang yang tanya di WhatsApp.
+              </p>
+            </div>
+            <Link
+              href="/calendar"
+              className="text-xs font-bold text-indigo-400 hover:underline flex items-center gap-1"
+            >
+              <span>Buka Kalendar Penuh</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {properties.map((p) => {
+              const activeBooking = bookings.find(
+                (b) =>
+                  b.property_id === p.id &&
+                  b.check_in <= todayStr &&
+                  b.check_out > todayStr &&
+                  b.booking_status !== "cancelled"
+              );
+
+              return (
+                <div 
+                  key={p.id}
+                  className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-4 ${
+                    activeBooking 
+                      ? "bg-[#14101A] border-rose-500/40" 
+                      : "bg-[#0B1516] border-emerald-500/50 shadow-lg shadow-emerald-500/5"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-400">{p.total_rooms} Bilik</span>
+                      {activeBooking ? (
+                        <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[11px] font-black">
+                          🔒 ADA TETAMU
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] font-black animate-pulse">
+                          ✅ KOSONG - BOLEH SEWA
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-black text-white">{p.name}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{p.address || "Kajang, Selangor"}</p>
+                  </div>
+
+                  {activeBooking ? (
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-rose-900/40 text-xs space-y-1">
+                      <div className="text-rose-200 font-bold">Tetamu: {activeBooking.guest?.name || "Tetamu"}</div>
+                      <div className="text-slate-400 text-[11px]">
+                        Keluar: {formatDate(activeBooking.check_out)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-emerald-900/40 text-xs space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Kadar Sewaan Hari Ini:</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-emerald-400 font-bold">Direct WA:</span>
+                        <span className="text-white font-black">{formatCurrency(p.price_direct || p.base_price_per_night)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                        <span>Airbnb / Booking:</span>
+                        <span>{formatCurrency(p.price_airbnb || Math.round(p.base_price_per_night * 1.15))}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                    <span className="text-slate-400 font-mono">Pintu: {p.smartlock_code}</span>
+                    <Link
+                      href="/bookings/new"
+                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+                    >
+                      Daftar Masuk →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">

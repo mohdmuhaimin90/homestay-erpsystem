@@ -1,4 +1,4 @@
-﻿-- ======================================================================
+-- ======================================================================
 -- SKEMA PANGKALAN DATA SUPABASE: SISTEM ERP HOMESTAY
 -- Jalankan skrip ini di SQL Editor dalam Supabase Dashboard anda.
 -- ======================================================================
@@ -85,7 +85,11 @@ VALUES
 ('Chalet B - Romantic Suite', 'No. 14, Jalan Damai 3, 43000 Kajang, Selangor', 180.00, 30.00, 50.00, 1, 3, '4422#', 'ChaletSuite_WiFi', 'suiteguest123'),
 ('Homestay C - Family Classic', 'No. 16, Jalan Damai 3, 43000 Kajang, Selangor', 350.00, 60.00, 150.00, 4, 12, '1234#', 'FamilyClassic_Guest', 'keluargabahagia')
 ON CONFLICT DO NOTHING;
--- Tambahan lajur untuk iCal 2-Way Sync (Airbnb & Booking.com)
+-- Tambahan lajur untuk iCal 2-Way Sync & Kadar Saluran (Airbnb & Booking.com)
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS airbnb_ical_url TEXT;
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS bookingcom_ical_url TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_direct NUMERIC(10,2);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_airbnb NUMERIC(10,2);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_bookingcom NUMERIC(10,2);
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS ical_uid TEXT;
+
