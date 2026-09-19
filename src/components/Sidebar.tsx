@@ -57,11 +57,11 @@ export default function Sidebar() {
             </div>
             <div>
               <div className="text-xs font-bold text-white truncate max-w-[120px]">
-                Damai Homestay
+                Homestay Kenangan
               </div>
               <div className="flex items-center gap-1 mt-0.5">
                 <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60">
-                  BOUTIQUE · 3 ROOMS
+                  KEMAMAN & KT
                 </span>
               </div>
             </div>

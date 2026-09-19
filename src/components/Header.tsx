@@ -43,7 +43,7 @@ export default function Header() {
         <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
           <span>StayVault</span>
           <span>/</span>
-          <span>Damai Homestay</span>
+          <span>Homestay Kenangan</span>
           <span>/</span>
           <span className="text-indigo-400 font-semibold">{uiMode === "Basic" ? "Basic" : "Pro"}</span>
         </div>

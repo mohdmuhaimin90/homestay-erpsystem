@@ -84,16 +84,17 @@ export default function DashboardPage() {
   const pAirbnb = 100 - pDirect - pBooking;
 
   const getCheckInWhatsAppMessage = (b: Booking) => {
-    const propName = b.property?.name || "Homestay Damai";
+    const propName = b.property?.name || "Homestay Kenangan";
     const guestName = b.guest?.name || "Tuan/Puan";
     const lockCode = b.property?.smartlock_code || "1234#";
-    const wifi = b.property?.wifi_ssid || "Homestay_WiFi";
-    const wifiPass = b.property?.wifi_password || "12345678";
-    return `Salam sejahtera ${guestName},\n\nSelamat datang ke ${propName}! 🏡\n\nBerikut adalah maklumat kemasukan (Check-in):\n🕒 Waktu Check-in: 3:00 Petang\n🔑 Kod Pintu Smartlock: ${lockCode}\n📶 WiFi: ${wifi} (Password: ${wifiPass})\n📍 Lokasi: ${b.property?.address || "Homestay Damai"}\n\nSekiranya ada apa-apa pertanyaan semasa penginapan, sila hubungi kami di talian ini. Selamat bercuti!`;
+    const wifi = b.property?.wifi_ssid || "HomestayKenangan";
+    const wifiPass = b.property?.wifi_password || "kenangan2026!";
+    const mapsLink = b.property?.google_maps_url || "https://homestay-kenangan.vercel.app/";
+    return `Salam sejahtera ${guestName},\n\nSelamat datang ke ${propName}! 🏡\n\nBerikut adalah maklumat kemasukan (Check-in):\n🕒 Waktu Check-in: 3:00 Petang\n🔑 Kod Pintu Smartlock: ${lockCode}\n📶 WiFi: ${wifi} (Password: ${wifiPass})\n📍 Pautan Lokasi: ${mapsLink}\n\nSekiranya ada apa-apa pertanyaan semasa penginapan, sila hubungi kami di talian ini. Selamat bercuti!`;
   };
 
   const getCheckOutWhatsAppMessage = (b: Booking) => {
-    const propName = b.property?.name || "Homestay Damai";
+    const propName = b.property?.name || "Homestay Kenangan";
     const guestName = b.guest?.name || "Tuan/Puan";
     return `Salam sejahtera ${guestName},\n\nTerima kasih kerana memilih ${propName} untuk percutian anda sekeluarga! ❤️\n\nKami berharap anda berpuas hati sepanjang penginapan. Sekiranya kunci sudah diletakkan di tempat asal dan suis elektrik dipadamkan, deposit keselamatan anda sebanyak RM ${b.deposit_amount || 100} akan dipulangkan sebentar lagi.\n\nJumpa lagi di lain masa!`;
   };
@@ -112,10 +113,10 @@ export default function DashboardPage() {
                 <span>BASIC</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                Selamat Datang ke Damai Homestay 🏡
+                Selamat Datang ke Homestay Kenangan 🏡
               </h1>
               <p className="text-base text-slate-300 mt-2 max-w-xl font-medium">
-                Pusat kawalan homestay yang pantas dan mudah. Tekan butang hijau untuk terus hantar kunci & alamat ke WhatsApp tetamu.
+                Pusat kawalan homestay yang pantas dan mudah. Kemaman 1 & 2 (Terengganu) dan Gong Badak (Kuala Terengganu).
               </p>
             </div>
 
@@ -247,10 +248,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                <span>🛌 Status Bilik Homestay Hari Ini</span>
+                <span>🛌 Status Bilik & Sewaan Hari Ini</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Tengok rumah mana yang kosong dan boleh disewakan kepada orang yang tanya di WhatsApp.
+                Status ketersediaan Homestay Kenangan Kemaman & Gong Badak.
               </p>
             </div>
             <Link
@@ -264,6 +265,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {properties.map((p) => {
+              const isMonthly = p.rental_type === "monthly" || p.id === "kemaman-1";
               const activeBooking = bookings.find(
                 (b) =>
                   b.property_id === p.id &&
@@ -276,15 +278,23 @@ export default function DashboardPage() {
                 <div 
                   key={p.id}
                   className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-4 ${
-                    activeBooking 
+                    isMonthly
+                      ? "bg-[#14120D] border-amber-500/50 shadow-lg shadow-amber-500/5"
+                      : activeBooking 
                       ? "bg-[#14101A] border-rose-500/40" 
                       : "bg-[#0B1516] border-emerald-500/50 shadow-lg shadow-emerald-500/5"
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-400">{p.total_rooms} Bilik</span>
-                      {activeBooking ? (
+                      <span className="text-xs font-bold text-slate-400">
+                        {p.total_rooms} Bilik · {p.total_bathrooms || 1} Bath
+                      </span>
+                      {isMonthly ? (
+                        <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black">
+                          🏠 ROOM RENTAL
+                        </span>
+                      ) : activeBooking ? (
                         <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[11px] font-black">
                           🔒 ADA TETAMU
                         </span>
@@ -295,10 +305,20 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <h3 className="text-lg font-black text-white">{p.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{p.address || "Kajang, Selangor"}</p>
+                    <p className="text-xs text-slate-400 mt-1">{p.address || "Kemaman, Terengganu"}</p>
                   </div>
 
-                  {activeBooking ? (
+                  {isMonthly ? (
+                    <div className="p-3.5 rounded-xl bg-black/40 border border-amber-900/40 text-xs space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-amber-400 block">Sewaan Bilik Bulanan Tetap:</span>
+                      <div className="text-xl font-black text-white">
+                        RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ bulan</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Rumah belakang (2 bilik 1 toilet 1 bathroom)
+                      </div>
+                    </div>
+                  ) : activeBooking ? (
                     <div className="p-3.5 rounded-xl bg-black/40 border border-rose-900/40 text-xs space-y-1">
                       <div className="text-rose-200 font-bold">Tetamu: {activeBooking.guest?.name || "Tetamu"}</div>
                       <div className="text-slate-400 text-[11px]">
@@ -314,7 +334,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center justify-between text-slate-400 text-[11px]">
                         <span>Airbnb / Booking:</span>
-                        <span>{formatCurrency(p.price_airbnb || Math.round(p.base_price_per_night * 1.15))}</span>
+                        <span>{formatCurrency(p.price_airbnb || Math.round(p.base_price_per_night * 1.18))}</span>
                       </div>
                     </div>
                   )}
@@ -322,10 +342,10 @@ export default function DashboardPage() {
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
                     <span className="text-slate-400 font-mono">Pintu: {p.smartlock_code}</span>
                     <Link
-                      href="/bookings/new"
+                      href="/properties"
                       className="text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
                     >
-                      Daftar Masuk →
+                      Butiran Unit →
                     </Link>
                   </div>
                 </div>

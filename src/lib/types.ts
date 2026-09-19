@@ -2,13 +2,17 @@ export interface Property {
   id: string;
   name: string;
   address?: string;
-  base_price_per_night: number; // default
-  price_direct?: number;        // Direct WhatsApp rate (tanpa komisen)
-  price_airbnb?: number;        // Airbnb rate (termasuk komisen platform)
-  price_bookingcom?: number;    // Booking.com rate (termasuk komisen OTA)
+  rental_type?: 'daily' | 'monthly'; // 'daily' (homestay) atau 'monthly' (room rental cth: Kemaman 1 RM700)
+  monthly_rental_rate?: number;      // cth: 700
+  base_price_per_night: number;     // default
+  price_direct?: number;            // Direct WhatsApp rate (tanpa komisen)
+  price_airbnb?: number;            // Airbnb rate (termasuk komisen platform)
+  price_bookingcom?: number;        // Booking.com rate (termasuk komisen OTA)
   cleaning_fee?: number;
   deposit_amount?: number;
   total_rooms?: number;
+  total_bathrooms?: number;
+  total_toilets?: number;
   max_guests?: number;
   smartlock_code?: string;
   wifi_ssid?: string;
@@ -17,6 +21,7 @@ export interface Property {
   google_maps_url?: string;
   airbnb_ical_url?: string;
   bookingcom_ical_url?: string;
+  notes?: string;
   status: 'active' | 'maintenance' | 'inactive';
   created_at?: string;
 }
