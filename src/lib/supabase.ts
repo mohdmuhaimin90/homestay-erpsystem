@@ -1,4 +1,4 @@
-﻿import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { Property, Guest, Booking } from "./types";
 import { mockProperties, mockGuests, mockBookings } from "./mockData";
 
@@ -17,15 +17,98 @@ export const supabase = isSupabaseConfigured
 
 // Helper data fetching with fallback to mock data / localStorage
 export async function getProperties(): Promise<Property[]> {
+  let list: Property[] = [];
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from("properties").select("*").order("name");
-    if (!error && data && data.length > 0) return data;
+    if (!error && data && data.length > 0) {
+      list = data;
+    }
   }
-  if (typeof window !== "undefined") {
+  if (list.length === 0 && typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_properties");
-    if (local) return JSON.parse(local);
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        const filtered = parsed.filter((p: any) => !p.name?.includes("Villa A") && !p.name?.includes("Chalet B") && !p.name?.includes("Homestay C"));
+        if (filtered.length > 0) list = filtered;
+      } catch (e) {
+        // ignore
+      }
+    }
   }
-  return mockProperties;
+  if (list.length === 0) {
+    list = mockProperties;
+  }
+
+  // Enrich with specific business rules for Homestay Kenangan units
+  const enriched = list.map((p) => {
+    const lowerName = (p.name || "").toLowerCase();
+    if (lowerName.includes("kemaman 1") || p.id === "kemaman-1") {
+      return {
+        ...p,
+        name: "Homestay Kenangan Kemaman 1",
+        address: "Chukai, Kemaman, Terengganu (Rumah Belakang)",
+        rental_type: "monthly" as const,
+        monthly_rental_rate: p.monthly_rental_rate || 700,
+        total_rooms: 2,
+        total_bathrooms: 1,
+        total_toilets: 1,
+        max_guests: 4,
+        deposit_amount: p.deposit_amount || 700,
+        cleaning_fee: 0,
+        base_price_per_night: 0,
+        google_maps_url: p.google_maps_url || "https://maps.app.goo.gl/KyBmg1iwgqLiSsha9",
+        notes: "Kini dijadikan sewaan bilik bulanan (Room Rental) - RM 700 / bulan. Rumah bahagian belakang.",
+      };
+    }
+    if (lowerName.includes("kemaman 2") || p.id === "kemaman-2") {
+      return {
+        ...p,
+        name: "Homestay Kenangan Kemaman 2",
+        address: "Chukai, Kemaman, Terengganu (Rumah Depan)",
+        rental_type: "daily" as const,
+        base_price_per_night: p.base_price_per_night || 220,
+        price_direct: p.price_direct || 220,
+        price_airbnb: p.price_airbnb || 260,
+        price_bookingcom: p.price_bookingcom || 270,
+        total_rooms: 3,
+        total_bathrooms: 1,
+        total_toilets: 1,
+        max_guests: 8,
+        deposit_amount: p.deposit_amount || 100,
+        cleaning_fee: p.cleaning_fee || 40,
+        google_maps_url: p.google_maps_url || "https://maps.app.goo.gl/KyBmg1iwgqLiSsha9",
+        notes: "Rumah depan (3 bilik, 1 toilet, 1 bathroom). Lokasi & kemudahan sama dengan Kemaman 1.",
+      };
+    }
+    if (lowerName.includes("gong badak") || p.id === "gong-badak") {
+      return {
+        ...p,
+        name: "Homestay Kenangan Gong Badak",
+        address: "Gong Badak, Kuala Terengganu, Terengganu",
+        rental_type: "daily" as const,
+        base_price_per_night: p.base_price_per_night || 300,
+        price_direct: p.price_direct || 300,
+        price_airbnb: p.price_airbnb || 350,
+        price_bookingcom: p.price_bookingcom || 365,
+        total_rooms: 4,
+        total_bathrooms: 4,
+        total_toilets: 4,
+        max_guests: 12,
+        deposit_amount: p.deposit_amount || 150,
+        cleaning_fee: p.cleaning_fee || 60,
+        google_maps_url: p.google_maps_url || "https://maps.app.goo.gl/SCBDByiRjyYQefny6",
+        notes: "Rumah di Gong Badak, Kuala Terengganu (4 bilik, 4 bathroom). Dekat UMT/UNISZA & pantai.",
+      };
+    }
+    return p;
+  });
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("homestay_properties", JSON.stringify(enriched));
+  }
+
+  return enriched;
 }
 
 export async function getGuests(): Promise<Guest[]> {
@@ -84,8 +167,19 @@ export async function saveProperty(property: Omit<Property, "id"> & { id?: strin
   const complete: Property = { ...property, id: newId };
 
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from("properties").insert([property]).select().single();
-    if (!error && data) return data;
+    const allowedColumns = [
+      "id", "name", "address", "base_price_per_night", "cleaning_fee", "deposit_amount",
+      "total_rooms", "max_guests", "smartlock_code", "wifi_ssid", "wifi_password",
+      "waze_url", "google_maps_url", "status", "created_at", "airbnb_ical_url", "bookingcom_ical_url"
+    ];
+    const dbPayload: Record<string, any> = {};
+    for (const key of allowedColumns) {
+      if ((property as any)[key] !== undefined) {
+        dbPayload[key] = (property as any)[key];
+      }
+    }
+    const { data, error } = await supabase.from("properties").upsert([dbPayload]).select().single();
+    if (!error && data) return { ...complete, ...data };
   }
 
   if (typeof window !== "undefined") {

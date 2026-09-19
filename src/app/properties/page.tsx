@@ -177,7 +177,8 @@ export default function PropertiesPage() {
       {/* Properties Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {properties.map((p) => {
-          const isMonthlyRental = p.rental_type === "monthly" || p.id === "kemaman-1";
+          const lowerName = (p.name || "").toLowerCase();
+          const isMonthlyRental = p.rental_type === "monthly" || p.id === "kemaman-1" || lowerName.includes("kemaman 1");
           const directRate = p.price_direct || p.base_price_per_night;
           const airbnbRate = p.price_airbnb || Math.round(p.base_price_per_night * 1.18);
           const bookingRate = p.price_bookingcom || Math.round(p.base_price_per_night * 1.22);
@@ -240,7 +241,9 @@ export default function PropertiesPage() {
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold">Tandas & Bilik Air</span>
                     <div className="text-white font-black mt-0.5">
-                      {p.total_toilets || 1} Toilet · {p.total_bathrooms || 1} Bath
+                      {lowerName.includes("gong badak") 
+                        ? "4 Bathroom" 
+                        : `${p.total_toilets || 1} Toilet · ${p.total_bathrooms || 1} Bathroom`}
                     </div>
                   </div>
                 </div>

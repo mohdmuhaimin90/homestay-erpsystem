@@ -265,7 +265,8 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {properties.map((p) => {
-              const isMonthly = p.rental_type === "monthly" || p.id === "kemaman-1";
+              const lowerName = (p.name || "").toLowerCase();
+              const isMonthly = p.rental_type === "monthly" || p.id === "kemaman-1" || lowerName.includes("kemaman 1");
               const activeBooking = bookings.find(
                 (b) =>
                   b.property_id === p.id &&
@@ -288,7 +289,7 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400">
-                        {p.total_rooms} Bilik · {p.total_bathrooms || 1} Bath
+                        {p.total_rooms} Bilik · {p.total_toilets ? `${p.total_toilets} Toilet · ` : ""}{p.total_bathrooms || 1} Bath
                       </span>
                       {isMonthly ? (
                         <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black">

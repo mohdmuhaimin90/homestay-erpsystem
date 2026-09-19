@@ -135,9 +135,11 @@ export async function POST(req: NextRequest) {
       if (!dateMap || typeof dateMap !== "object") continue;
 
       // Find or register the property
-      let matchedProp = properties.find(
-        (p) => p.id === homestayId || p.name.toLowerCase().includes(homestayId.toLowerCase())
-      );
+      const normId = homestayId.toLowerCase().replace(/-/g, " ");
+      let matchedProp = properties.find((p) => {
+        const normName = p.name.toLowerCase().replace(/-/g, " ");
+        return p.id === homestayId || normName.includes(normId) || normId.includes(normName);
+      });
 
       if (!matchedProp) {
         // Auto-create property if not found
