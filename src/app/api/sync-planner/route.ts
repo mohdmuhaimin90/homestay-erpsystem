@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, isSupabaseConfigured, saveGuest, saveBooking, getProperties } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, saveGuest, saveBooking, getProperties, saveProperty } from "@/lib/supabase";
 import { BookingSource } from "@/lib/types";
 
 const PLANNER_API_URL = "https://ais-pre-fwyyjvsod46ojedyaguepf-355143251389.asia-southeast1.run.app/api/bookings";
@@ -15,19 +15,80 @@ interface PlannerBookingEntry {
 
 type PlannerData = Record<string, Record<string, PlannerBookingEntry>>;
 
+// Helper to merge consecutive booked days into a single reservation
+function mergeConsecutiveBookings(datesMap: Record<string, PlannerBookingEntry>) {
+  const sortedDates = Object.keys(datesMap).filter((d) => datesMap[d] && datesMap[d].booked).sort();
+  const clusters: Array<{
+    checkIn: string;
+    lastDate: string;
+    nights: number;
+    totalPrice: number;
+    source: string;
+    comment: string;
+    dates: string[];
+  }> = [];
+
+  let current: typeof clusters[0] | null = null;
+
+  for (const date of sortedDates) {
+    const item = datesMap[date];
+    const prevDate = current ? new Date(current.lastDate) : null;
+    const thisDate = new Date(date);
+    const diffDays = prevDate ? Math.round((thisDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+
+    const sameComment = current && (
+      (current.comment.trim() && current.comment.trim().toLowerCase() === (item.comment || "").trim().toLowerCase()) ||
+      (!current.comment.trim() && !(item.comment || "").trim())
+    );
+
+    if (current && diffDays === 1 && sameComment) {
+      current.lastDate = date;
+      current.nights += 1;
+      current.totalPrice += Number(item.price || 0);
+      current.dates.push(date);
+    } else {
+      if (current) clusters.push(current);
+      current = {
+        checkIn: date,
+        lastDate: date,
+        nights: 1,
+        totalPrice: Number(item.price || 0),
+        source: item.source || "direct",
+        comment: item.comment || "",
+        dates: [date],
+      };
+    }
+  }
+  if (current) clusters.push(current);
+
+  return clusters.map((c) => {
+    const nextDay = new Date(c.lastDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return {
+      checkIn: c.checkIn,
+      checkOut: nextDay.toISOString().split("T")[0],
+      nights: c.nights,
+      totalPrice: c.totalPrice,
+      source: c.source,
+      comment: c.comment,
+      rawDatesCount: c.dates.length,
+    };
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     let data: PlannerData | null = null;
 
-    // Check if client provided raw JSON payload directly
+    // Check if client passed parsed or stringified JSON payload
     const body = await req.json().catch(() => null);
     if (body && body.data) {
-      data = body.data;
-    } else if (body && typeof body === "object" && !body.data && Object.keys(body).length > 0) {
+      data = typeof body.data === "string" ? JSON.parse(body.data) : body.data;
+    } else if (body && typeof body === "object" && Object.keys(body).length > 0) {
       data = body;
     }
 
-    // If not provided in body, try to fetch from Google AI Studio Booking Planner API
+    // Attempt direct server fetch if no body provided
     if (!data) {
       try {
         const res = await fetch(PLANNER_API_URL, {
@@ -48,41 +109,71 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
               success: false,
               requiresCookie: true,
-              message: "Google AI Studio memerlukan pengesahan Cookie browser. Sila gunakan fungsi 'Tarik Terus dari Browser' atau tampal JSON di skrin integrasi.",
+              message: "Google AI Studio Cloud Run memerlukan token sesi browser.",
             }, { status: 401 });
           }
         }
       } catch (fetchErr: any) {
-        console.error("Fetch planner error:", fetchErr);
+        console.error("Direct fetch failed:", fetchErr);
       }
     }
 
     if (!data || typeof data !== "object") {
       return NextResponse.json({
         success: false,
-        error: "Tiada data tempahan yang sah ditemui.",
+        error: "Tiada format data Booking Planner yang sah diterima.",
       }, { status: 400 });
     }
 
     const properties = await getProperties();
-    let importedCount = 0;
-    const processedHomestays: string[] = [];
+    let totalNightsImported = 0;
+    let totalReservationsImported = 0;
+    const homestaySummaries: Record<string, { reservations: number; nights: number }> = {};
 
-    // Format and import each homestay's bookings
+    // 1. Process each homestay from the planner
     for (const [homestayId, dateMap] of Object.entries(data)) {
-      processedHomestays.push(homestayId);
+      if (!dateMap || typeof dateMap !== "object") continue;
 
-      // Match or resolve property
-      let matchedProp = properties.find((p) => p.id === homestayId || p.name.toLowerCase().includes(homestayId.toLowerCase()));
-      const propId = matchedProp ? matchedProp.id : homestayId;
+      // Find or register the property
+      let matchedProp = properties.find(
+        (p) => p.id === homestayId || p.name.toLowerCase().includes(homestayId.toLowerCase())
+      );
 
-      for (const [dateStr, entry] of Object.entries(dateMap)) {
-        if (!entry || !entry.booked) continue;
+      if (!matchedProp) {
+        // Auto-create property if not found
+        const cleanName = homestayId === "kemaman-1" 
+          ? "Kemaman 1" 
+          : homestayId === "kemaman-2" 
+          ? "Kemaman 2" 
+          : homestayId === "gong-badak" 
+          ? "Gong Badak" 
+          : homestayId.replace("-", " ").toUpperCase();
 
-        // Parse guest name and phone from comment (e.g. "En. Azman - 0123456789")
+        matchedProp = await saveProperty({
+          id: homestayId,
+          name: cleanName,
+          address: homestayId.includes("kemaman") ? "Chukai, Kemaman, Terengganu" : "Kuala Terengganu",
+          base_price_per_night: 250,
+          price_direct: 250,
+          price_airbnb: 295,
+          price_bookingcom: 305,
+          total_rooms: 3,
+          max_guests: 8,
+          status: "active",
+        });
+      }
+
+      const propId = matchedProp.id;
+
+      // Merge contiguous dates into single multi-night bookings
+      const mergedReservations = mergeConsecutiveBookings(dateMap);
+      homestaySummaries[matchedProp.name] = { reservations: 0, nights: 0 };
+
+      for (const resv of mergedReservations) {
+        // Parse Guest Name & Phone
         let guestName = "Tetamu Booking Planner";
         let guestPhone = "0123456789";
-        const comment = entry.comment || "";
+        const comment = resv.comment || "";
 
         if (comment.includes("-")) {
           const parts = comment.split("-");
@@ -92,54 +183,59 @@ export async function POST(req: NextRequest) {
           guestName = comment.trim();
         }
 
-        // Map source
+        // Map Booking Source
         let bookingSource: BookingSource = "direct_whatsapp";
-        if (entry.source === "airbnb") bookingSource = "airbnb";
-        else if (entry.source === "booking" || entry.source === "booking_com") bookingSource = "booking_com";
+        const rawSrc = (resv.source || "").toLowerCase();
+        if (rawSrc.includes("airbnb")) bookingSource = "airbnb";
+        else if (rawSrc.includes("booking")) bookingSource = "booking_com";
+        else if (rawSrc.includes("agoda")) bookingSource = "agoda";
 
-        // Save Guest
+        // 2. Save / Upsert Guest
         const guest = await saveGuest({
           name: guestName,
           phone: guestPhone,
-          notes: `Imported from Booking Planner (${homestayId})`,
+          notes: `Tetamu ${matchedProp.name} (Import dari Google AI Studio Planner)`,
         });
 
-        // Calculate checkout next day
-        const checkInDate = new Date(dateStr);
-        const checkOutDate = new Date(checkInDate);
-        checkOutDate.setDate(checkOutDate.getDate() + 1);
-        const checkOutStr = checkOutDate.toISOString().split("T")[0];
+        // 3. Determine pricing: if 0, use nights * property direct price
+        const calcPrice = resv.totalPrice > 0 
+          ? resv.totalPrice 
+          : (resv.nights * (matchedProp.price_direct || matchedProp.base_price_per_night || 250));
 
-        // Save Booking
+        // 4. Save Booking
         await saveBooking({
           property_id: propId,
           guest_id: guest.id,
-          check_in: dateStr,
-          check_out: checkOutStr,
-          total_nights: 1,
-          total_price: Number(entry.price || matchedProp?.price_direct || 250),
-          deposit_amount: 100,
+          check_in: resv.checkIn,
+          check_out: resv.checkOut,
+          total_nights: resv.nights,
+          total_price: calcPrice,
+          deposit_amount: matchedProp.deposit_amount || 100,
           source: bookingSource,
           booking_status: "confirmed",
-          payment_status: "deposit_paid",
-          notes: `Booking Planner: ${comment}`,
+          payment_status: "fully_paid",
+          notes: `Booking Planner: ${comment} (${resv.nights} malam)`,
         });
 
-        importedCount++;
+        totalReservationsImported++;
+        totalNightsImported += resv.nights;
+        homestaySummaries[matchedProp.name].reservations += 1;
+        homestaySummaries[matchedProp.name].nights += resv.nights;
       }
     }
 
     return NextResponse.json({
       success: true,
-      importedCount,
-      homestays: processedHomestays,
-      message: `Berjaya menyelaraskan ${importedCount} rekod tempahan dari Booking Planner.`,
+      totalReservations: totalReservationsImported,
+      totalNights: totalNightsImported,
+      homestaySummaries,
+      message: `Berjaya mengimport ${totalReservationsImported} tempahan (${totalNightsImported} malam) dari Januari hingga sekarang!`,
     });
   } catch (err: any) {
     console.error("API /api/sync-planner error:", err);
     return NextResponse.json({
       success: false,
-      error: err.message || "Gagal menyelaraskan data.",
+      error: err.message || "Gagal memproses data.",
     }, { status: 500 });
   }
 }
