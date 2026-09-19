@@ -15,8 +15,10 @@ import {
 import { getBookings } from "@/lib/supabase";
 import { Booking } from "@/lib/types";
 import { formatCurrency, formatDate, generateWhatsAppUrl } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function BookingsPage() {
+  const { t, language } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -46,17 +48,17 @@ export default function BookingsPage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200/60 mb-2">
             <Sparkles className="w-3 h-3 text-indigo-600" />
-            <span>Pengurusan Tempahan Menyeluruh</span>
+            <span>{language === "bm" ? "Pengurusan Tempahan Menyeluruh" : "Comprehensive Reservation Management"}</span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Senarai Tempahan & Rekod Tetamu</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Semak status bayaran, baki sewa, dan pengesahan tempahan.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t("bookings.title")}</h1>
+          <p className="text-xs text-slate-500 mt-0.5">{t("bookings.subtitle")}</p>
         </div>
         <Link
           href="/bookings/new"
           className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-500/25 hover:opacity-95 hover:-translate-y-0.5 transition"
         >
           <PlusCircle className="w-4 h-4" />
-          <span>Daftar Tempahan Baru</span>
+          <span>{t("header.new_reservation")}</span>
         </Link>
       </div>
 
@@ -66,7 +68,7 @@ export default function BookingsPage() {
           <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Cari nama tetamu, no telefon, atau unit..."
+            placeholder={t("bookings.search_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 text-xs font-semibold focus:ring-3 focus:ring-indigo-500/15 text-slate-900 shadow-xs"
@@ -80,7 +82,7 @@ export default function BookingsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs bg-transparent border-none font-bold text-slate-700 cursor-pointer focus:outline-hidden"
           >
-            <option value="all">Semua Status</option>
+            <option value="all">{t("bookings.all_statuses")}</option>
             <option value="confirmed">Confirmed</option>
             <option value="checked_in">Checked In</option>
             <option value="checked_out">Checked Out</option>
@@ -96,27 +98,27 @@ export default function BookingsPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/60 text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-100">
               <tr>
-                <th className="py-4 pl-6">Tetamu</th>
-                <th className="py-4 px-4">Unit Homestay</th>
-                <th className="py-4 px-4">Tarikh Tempahan</th>
-                <th className="py-4 px-4">Kewangan</th>
-                <th className="py-4 px-4">Status</th>
-                <th className="py-4 px-4">Punca</th>
-                <th className="py-4 pr-6 text-right">Tindakan</th>
+                <th className="py-4 pl-6">{t("bookings.col_guest")}</th>
+                <th className="py-4 px-4">{t("bookings.col_property")}</th>
+                <th className="py-4 px-4">{t("bookings.col_dates")}</th>
+                <th className="py-4 px-4">{t("bookings.col_total")}</th>
+                <th className="py-4 px-4">{t("bookings.col_status")}</th>
+                <th className="py-4 px-4">{t("bookings.col_channel")}</th>
+                <th className="py-4 pr-6 text-right">{t("bookings.col_actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400 italic">
-                    Tiada rekod tempahan dijumpai.
+                    {language === "bm" ? "Tiada rekod tempahan dijumpai." : "No reservation records found."}
                   </td>
                 </tr>
               ) : (
                 filtered.map((bk) => (
                   <tr key={bk.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 pl-6">
-                      <div className="font-extrabold text-slate-900 text-xs">{bk.guest?.name || "Tetamu"}</div>
+                      <div className="font-extrabold text-slate-900 text-xs">{bk.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
                       <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                         <Phone className="w-3 h-3 text-slate-400" /> {bk.guest?.phone || "-"}
                       </div>
@@ -128,7 +130,7 @@ export default function BookingsPage() {
                     </td>
                     <td className="py-4 px-4">
                       <div className="font-bold text-slate-900">{formatDate(bk.check_in)}</div>
-                      <div className="text-[11px] text-slate-500">➔ {formatDate(bk.check_out)} ({bk.total_nights} mlm)</div>
+                      <div className="text-[11px] text-slate-500">➔ {formatDate(bk.check_out)} ({bk.total_nights} {language === "bm" ? "mlm" : "n"})</div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="font-black text-slate-900">{formatCurrency(bk.total_price)}</div>
@@ -139,7 +141,11 @@ export default function BookingsPage() {
                           ? "bg-blue-100/70 text-blue-800 border border-blue-200"
                           : "bg-amber-100/70 text-amber-800 border border-amber-200"
                       }`}>
-                        {bk.payment_status === "fully_paid" ? "Lunas" : bk.payment_status === "deposit_paid" ? "Deposit" : "Belum Bayar"}
+                        {bk.payment_status === "fully_paid" 
+                          ? (language === "bm" ? "Lunas" : "Fully Paid")
+                          : bk.payment_status === "deposit_paid" 
+                          ? (language === "bm" ? "Deposit" : "Deposit Paid")
+                          : (language === "bm" ? "Belum Bayar" : "Unpaid")}
                       </span>
                     </td>
                     <td className="py-4 px-4">

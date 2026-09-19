@@ -8,30 +8,29 @@ import {
   BookOpenCheck, 
   Home, 
   Users, 
-  DollarSign,
   MessageSquareShare, 
   FileUp, 
   Settings,
-  ChevronDown,
-  Building2,
-  Sparkles
+  ChevronDown
 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const operationsNav = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Reservations", href: "/bookings", icon: BookOpenCheck, badge: "8" },
-    { name: "Calendar Matrix", href: "/calendar", icon: CalendarDays },
-    { name: "Rooms & Units", href: "/properties", icon: Home, badge: "3" },
-    { name: "Guests", href: "/guests", icon: Users },
+    { name: t("nav.dashboard"), href: "/", icon: LayoutDashboard },
+    { name: t("nav.reservations"), href: "/bookings", icon: BookOpenCheck, badge: "32" },
+    { name: t("nav.calendar"), href: "/calendar", icon: CalendarDays },
+    { name: t("nav.properties"), href: "/properties", icon: Home, badge: "3" },
+    { name: t("nav.guests"), href: "/guests", icon: Users },
   ];
 
   const intelligenceNav = [
-    { name: "WhatsApp & Invois", href: "/whatsapp", icon: MessageSquareShare },
-    { name: "Data Migration", href: "/import", icon: FileUp },
-    { name: "Settings", href: "/settings", icon: Settings },
+    { name: t("nav.whatsapp"), href: "/whatsapp", icon: MessageSquareShare },
+    { name: t("nav.import"), href: "/import", icon: FileUp },
+    { name: t("nav.settings"), href: "/settings", icon: Settings },
   ];
 
   return (
@@ -75,14 +74,14 @@ export default function Sidebar() {
         {/* Operations */}
         <div className="space-y-1">
           <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider px-3 pb-1 block">
-            OPERATIONS
+            {t("nav.operations")}
           </span>
           {operationsNav.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold transition-all duration-150 ${
                   isActive
@@ -111,14 +110,14 @@ export default function Sidebar() {
         {/* Intelligence */}
         <div className="space-y-1">
           <span className="text-[10px] font-bold text-slate-400/80 uppercase tracking-wider px-3 pb-1 block">
-            INTELLIGENCE
+            {t("nav.intelligence")}
           </span>
           {intelligenceNav.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold transition-all ${
                   isActive
@@ -140,7 +139,7 @@ export default function Sidebar() {
           <span>RM0 Oracle VPS</span>
           <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live Online
+            {t("nav.live_online")}
           </span>
         </div>
       </div>

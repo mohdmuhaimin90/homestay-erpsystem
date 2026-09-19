@@ -1,4 +1,4 @@
-﻿export function formatCurrency(amount: number | undefined | null): string {
+export function formatCurrency(amount: number | undefined | null): string {
   if (amount === undefined || amount === null) return "RM 0.00";
   return new Intl.NumberFormat("ms-MY", {
     style: "currency",
@@ -7,11 +7,11 @@
   }).format(amount);
 }
 
-export function formatDate(dateString: string | undefined | null): string {
+export function formatDate(dateString: string | undefined | null, locale: string = "ms-MY"): string {
   if (!dateString) return "-";
   try {
     const d = new Date(dateString);
-    return d.toLocaleDateString("ms-MY", {
+    return d.toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",

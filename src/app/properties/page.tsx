@@ -24,8 +24,10 @@ import {
 import { getProperties, saveProperty } from "@/lib/supabase";
 import { Property } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function PropertiesPage() {
+  const { t, language } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -71,13 +73,17 @@ export default function PropertiesPage() {
       const res = await fetch("/api/sync-ical", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        setSyncResult(`✅ Selesai! Sebanyak ${data.importedCount} tempahan baru berjaya diselaraskan dari Airbnb/Booking.com.`);
+        setSyncResult(
+          language === "bm"
+            ? `✅ Selesai! Sebanyak ${data.importedCount} tempahan baru berjaya diselaraskan dari Airbnb/Booking.com.`
+            : `✅ Success! Synced ${data.importedCount} new reservations from Airbnb/Booking.com.`
+        );
         loadData();
       } else {
-        setSyncResult(`Ralat: ${data.error || "Gagal menyelaraskan iCal."}`);
+        setSyncResult(language === "bm" ? `Ralat: ${data.error || "Gagal menyelaraskan iCal."}` : `Error: ${data.error || "Failed to sync iCal."}`);
       }
     } catch (err: any) {
-      setSyncResult(`Ralat penyelarasan: ${err.message}`);
+      setSyncResult(language === "bm" ? `Ralat penyelarasan: ${err.message}` : `Sync error: ${err.message}`);
     } finally {
       setSyncing(false);
     }
@@ -135,13 +141,19 @@ export default function PropertiesPage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-950/80 text-indigo-400 text-[10px] font-black tracking-wider uppercase border border-indigo-800/60 mb-2">
             <Sparkles className="w-3 h-3 text-indigo-400" />
-            <span>HOMESTAY KENANGAN · SENARAI PREMIS & KADAR</span>
+            <span>{language === "bm" ? "HOMESTAY KENANGAN · SENARAI PREMIS & KADAR" : "HOMESTAY KENANGAN · PROPERTIES & RATES"}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            Unit Homestay & <span className="text-indigo-400">Penyewaan Bilik</span>
+            {language === "bm" ? (
+              <>Unit Homestay & <span className="text-indigo-400">Penyewaan Bilik</span></>
+            ) : (
+              <>Homestay Units & <span className="text-indigo-400">Room Rentals</span></>
+            )}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5 max-w-xl">
-            Pengurusan 3 unit rasmi Homestay Kenangan di Kemaman & Gong Badak, termasuk Room Rental bulanan dan kadar pelbagai saluran.
+            {language === "bm" 
+              ? "Pengurusan 3 unit rasmi Homestay Kenangan di Kemaman & Gong Badak, termasuk Room Rental bulanan dan kadar pelbagai saluran."
+              : "Management of 3 official Homestay Kenangan units in Kemaman & Gong Badak, including monthly room rentals and multi-channel rates."}
           </p>
         </div>
 
@@ -152,14 +164,14 @@ export default function PropertiesPage() {
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#111726] hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold shadow-md transition"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-cyan-400" : "text-slate-400"}`} />
-            <span>{syncing ? "Sedang Sync..." : "Sync Airbnb & Booking"}</span>
+            <span>{syncing ? (language === "bm" ? "Sedang Sync..." : "Syncing...") : t("properties.btn_sync_ical")}</span>
           </button>
           <button
             onClick={() => setShowModal(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-600/30 transition-all hover:scale-105"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Tambah Unit Baru</span>
+            <span>{t("properties.btn_add_unit")}</span>
           </button>
         </div>
       </div>
@@ -198,11 +210,11 @@ export default function PropertiesPage() {
                   <div className="flex items-center justify-between">
                     {isMonthlyRental ? (
                       <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 rounded-full">
-                        🏠 ROOM RENTAL (BULANAN)
+                        🏠 {language === "bm" ? "ROOM RENTAL (BULANAN)" : "ROOM RENTAL (MONTHLY)"}
                       </span>
                     ) : (
                       <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800/80 rounded-full">
-                        🏡 HOMESTAY HARIAN
+                        🏡 {language === "bm" ? "HOMESTAY HARIAN" : "DAILY HOMESTAY"}
                       </span>
                     )}
                     <span className="text-[10px] text-slate-500 font-mono">ID: {p.id}</span>
@@ -221,7 +233,7 @@ export default function PropertiesPage() {
                         target="_blank"
                         rel="noreferrer"
                         className="text-[11px] font-bold text-cyan-400 hover:underline flex items-center gap-1"
-                        title="Buka Google Maps"
+                        title={language === "bm" ? "Buka Google Maps" : "Open Google Maps"}
                       >
                         <span>Maps</span>
                         <ExternalLink className="w-3 h-3" />
@@ -233,17 +245,17 @@ export default function PropertiesPage() {
                 {/* Capacity & Rooms Specs */}
                 <div className="p-3.5 bg-[#111726] rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Keluasan Unit</span>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">{t("properties.unit_size")}</span>
                     <div className="text-white font-black mt-0.5">
-                      {p.total_rooms || 3} Bilik
+                      {p.total_rooms || 3} {language === "bm" ? "Bilik" : "Rooms"}
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Tandas & Bilik Air</span>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">{t("properties.bath_toilet")}</span>
                     <div className="text-white font-black mt-0.5">
                       {lowerName.includes("gong badak") 
-                        ? "4 Bathroom" 
-                        : `${p.total_toilets || 1} Toilet · ${p.total_bathrooms || 1} Bathroom`}
+                        ? (language === "bm" ? "4 Bilik Air" : "4 Bathrooms")
+                        : `${p.total_toilets || 1} ${language === "bm" ? "Toilet" : "Toilet"} · ${p.total_bathrooms || 1} ${language === "bm" ? "Bathroom" : "Bathroom"}`}
                     </div>
                   </div>
                 </div>
@@ -252,13 +264,13 @@ export default function PropertiesPage() {
                 {isMonthlyRental ? (
                   <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-1.5 text-center">
                     <span className="text-[10px] uppercase font-black text-amber-400 tracking-wider block">
-                      Kadar Sewaan Bulanan (Bilik)
+                      {t("properties.monthly_rental_rate")}
                     </span>
                     <div className="text-2xl font-black text-white">
-                      RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ bulan</span>
+                      RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ {language === "bm" ? "bulan" : "month"}</span>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-snug">
-                      Penyewaan jangka panjang tetap. Rumah bahagian belakang.
+                      {language === "bm" ? "Penyewaan jangka panjang tetap. Rumah bahagian belakang." : "Fixed long-term room rental. Back house."}
                     </p>
                   </div>
                 ) : (
@@ -266,7 +278,7 @@ export default function PropertiesPage() {
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Tag className="w-3 h-3 text-indigo-400" />
-                        <span>Kadar Mengikut Saluran</span>
+                        <span>{t("properties.rate_by_channel")}</span>
                       </span>
                     </div>
                     
@@ -275,21 +287,21 @@ export default function PropertiesPage() {
                       <div className="p-2 rounded-xl bg-[#111726] border border-emerald-900/40 text-center">
                         <span className="text-[9px] font-black text-emerald-400 uppercase block">Direct WA</span>
                         <div className="text-sm font-black text-white mt-0.5">{formatCurrency(directRate)}</div>
-                        <span className="text-[9px] text-slate-400">Harga Bersih</span>
+                        <span className="text-[9px] text-slate-400">{t("properties.net_price")}</span>
                       </div>
 
                       {/* Airbnb */}
                       <div className="p-2 rounded-xl bg-[#111726] border border-rose-900/40 text-center">
                         <span className="text-[9px] font-black text-rose-400 uppercase block">Airbnb</span>
                         <div className="text-sm font-black text-white mt-0.5">{formatCurrency(airbnbRate)}</div>
-                        <span className="text-[9px] text-slate-400">+18% Caj</span>
+                        <span className="text-[9px] text-slate-400">+18% {t("properties.platform_fee")}</span>
                       </div>
 
                       {/* Booking.com */}
                       <div className="p-2 rounded-xl bg-[#111726] border border-cyan-900/40 text-center">
                         <span className="text-[9px] font-black text-cyan-400 uppercase block">Booking</span>
                         <div className="text-sm font-black text-white mt-0.5">{formatCurrency(bookingRate)}</div>
-                        <span className="text-[9px] text-slate-400">+20% Caj</span>
+                        <span className="text-[9px] text-slate-400">+20% {t("properties.platform_fee")}</span>
                       </div>
                     </div>
                   </div>
@@ -314,7 +326,7 @@ export default function PropertiesPage() {
                   <div className="p-3 bg-[#080B11] border border-slate-800 rounded-xl space-y-1.5 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold flex items-center gap-1 text-cyan-400 text-[11px]">
-                        <CalendarSync className="w-3 h-3" /> iCal Export Feed (Airbnb / Booking)
+                        <CalendarSync className="w-3 h-3" /> {t("properties.ical_export_title")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between bg-[#111726] p-2 rounded-lg text-[11px] font-mono border border-slate-800">
@@ -325,7 +337,7 @@ export default function PropertiesPage() {
                         className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 text-[11px] ml-2 shrink-0"
                       >
                         {copiedPropId === p.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedPropId === p.id ? "Disalin" : "Salin"}</span>
+                        <span>{copiedPropId === p.id ? (language === "bm" ? "Disalin" : "Copied") : (language === "bm" ? "Salin" : "Copy")}</span>
                       </button>
                     </div>
                   </div>
@@ -335,7 +347,7 @@ export default function PropertiesPage() {
               {/* Card Footer */}
               <div className="p-4 bg-[#080B11]/90 border-t border-slate-800 flex justify-between items-center text-xs">
                 <span className="text-[10px] text-slate-400 font-mono">
-                  {isMonthlyRental ? "Rumah Belakang" : p.id === "kemaman-2" ? "Rumah Depan" : "Banglo 4 Bilik"}
+                  {isMonthlyRental ? (language === "bm" ? "Rumah Belakang" : "Back House") : p.id === "kemaman-2" ? (language === "bm" ? "Rumah Depan" : "Front House") : (language === "bm" ? "Banglo 4 Bilik" : "4-Bedroom Bungalow")}
                 </span>
                 <span className="text-[11px] text-indigo-400 font-black">Homestay Kenangan ⚡</span>
               </div>
@@ -350,8 +362,12 @@ export default function PropertiesPage() {
           <div className="bg-[#0D121D] border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
-                <h3 className="font-black text-white text-lg tracking-tight">Tambah Unit Homestay / Rental</h3>
-                <p className="text-xs text-slate-400">Tetapkan jenis sewaan (Harian atau Sewa Bulanan).</p>
+                <h3 className="font-black text-white text-lg tracking-tight">
+                  {language === "bm" ? "Tambah Unit Homestay / Rental" : "Add Homestay / Rental Unit"}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {language === "bm" ? "Tetapkan jenis sewaan (Harian atau Sewa Bulanan)." : "Set rental operation type (Daily or Monthly Rental)."}
+                </p>
               </div>
               <button 
                 onClick={() => setShowModal(false)} 
@@ -363,10 +379,10 @@ export default function PropertiesPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Nama Unit *</label>
+                <label className="block font-bold text-slate-300 mb-1">{language === "bm" ? "Nama Unit *" : "Unit Name *"}</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Homestay Kenangan Kemaman 2"
+                  placeholder={language === "bm" ? "Contoh: Homestay Kenangan Kemaman 2" : "E.g., Homestay Kenangan Kemaman 2"}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full p-3 bg-[#111726] rounded-xl border border-slate-800 text-white font-bold focus:border-indigo-500 focus:outline-hidden"
@@ -376,7 +392,7 @@ export default function PropertiesPage() {
 
               {/* Rental Type Selector */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1.5">Jenis Operasi Sewaan *</label>
+                <label className="block font-bold text-slate-300 mb-1.5">{language === "bm" ? "Jenis Operasi Sewaan *" : "Rental Operation Type *"}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -387,8 +403,8 @@ export default function PropertiesPage() {
                         : "bg-[#111726] text-slate-400 border-slate-800 hover:text-white"
                     }`}
                   >
-                    <div className="text-xs font-bold">🏡 Homestay Harian</div>
-                    <div className="text-[10px] opacity-80 mt-0.5">Sewa harian ikut malam & platform</div>
+                    <div className="text-xs font-bold">{language === "bm" ? "🏡 Homestay Harian" : "🏡 Daily Homestay"}</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{language === "bm" ? "Sewa harian ikut malam & platform" : "Daily rental by night & platform"}</div>
                   </button>
                   <button
                     type="button"
@@ -399,15 +415,15 @@ export default function PropertiesPage() {
                         : "bg-[#111726] text-slate-400 border-slate-800 hover:text-white"
                     }`}
                   >
-                    <div className="text-xs font-bold">🏠 Room Rental Bulanan</div>
-                    <div className="text-[10px] opacity-80 mt-0.5">Cth: Kemaman 1 (RM700/bulan)</div>
+                    <div className="text-xs font-bold">{language === "bm" ? "🏠 Room Rental Bulanan" : "🏠 Monthly Room Rental"}</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{language === "bm" ? "Cth: Kemaman 1 (RM700/bulan)" : "E.g., Kemaman 1 (RM700/month)"}</div>
                   </button>
                 </div>
               </div>
 
               {rentalType === "monthly" ? (
                 <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/40 space-y-2">
-                  <label className="block font-bold text-amber-300">Kadar Sewaan Bulanan (RM) *</label>
+                  <label className="block font-bold text-amber-300">{language === "bm" ? "Kadar Sewaan Bulanan (RM) *" : "Monthly Rental Rate (RM) *"}</label>
                   <input
                     type="number"
                     value={monthlyRentalRate}
@@ -420,7 +436,7 @@ export default function PropertiesPage() {
               ) : (
                 <div className="p-4 rounded-xl bg-[#080B11] border border-slate-800 space-y-3">
                   <span className="font-black text-indigo-400 uppercase text-[10px] tracking-wider block">
-                    💰 Kadar Mengikut Saluran Jualan
+                    {language === "bm" ? "💰 Kadar Mengikut Saluran Jualan" : "💰 Multi-Channel Rates"}
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
@@ -466,7 +482,7 @@ export default function PropertiesPage() {
               {/* Bilik, Toilet, Bathroom */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Jumlah Bilik</label>
+                  <label className="block font-bold text-slate-300 mb-1">{language === "bm" ? "Jumlah Bilik" : "Bedrooms"}</label>
                   <input
                     type="number"
                     value={rooms}
@@ -475,7 +491,7 @@ export default function PropertiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Toilet</label>
+                  <label className="block font-bold text-slate-300 mb-1">{language === "bm" ? "Toilet" : "Toilets"}</label>
                   <input
                     type="number"
                     value={toilets}
@@ -484,7 +500,7 @@ export default function PropertiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Bathroom</label>
+                  <label className="block font-bold text-slate-300 mb-1">{language === "bm" ? "Bathroom" : "Bathrooms"}</label>
                   <input
                     type="number"
                     value={bathrooms}
@@ -495,7 +511,7 @@ export default function PropertiesPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Pautan Google Maps</label>
+                <label className="block font-bold text-slate-300 mb-1">{language === "bm" ? "Pautan Google Maps" : "Google Maps Link"}</label>
                 <input
                   type="url"
                   placeholder="https://maps.app.goo.gl/..."
@@ -511,13 +527,13 @@ export default function PropertiesPage() {
                   onClick={() => setShowModal(false)}
                   className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold"
                 >
-                  Batal
+                  {t("action.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-lg transition"
                 >
-                  Simpan Unit
+                  {t("properties.save_unit")}
                 </button>
               </div>
             </form>

@@ -17,8 +17,10 @@ import {
   Check,
   Clipboard
 } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ImportPage() {
+  const { t, language } = useLanguage();
   const [jsonInput, setJsonInput] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -141,13 +143,14 @@ export default function ImportPage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-950/80 text-indigo-400 text-[10px] font-black tracking-wider uppercase border border-indigo-800/60 mb-2">
             <Sparkles className="w-3 h-3 text-indigo-400" />
-            <span>MIGRASI DATA PENUH (JANUARI - SEKARANG)</span>
+            <span>{t("import.badge", "MIGRASI DATA PENUH (JANUARI - SEKARANG)")}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Import Penuh <span className="text-indigo-400">Booking Planner</span>
+            {t("import.title_part1", "Import Penuh")}{" "}
+            <span className="text-indigo-400">{t("import.title_part2", "Booking Planner")}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-xl">
-            Pindahkan rekod tempahan lengkap dari Google AI Studio bagi Kemaman 1, Kemaman 2, dan Gong Badak ke dalam sistem ERP. Tarikh berturutan akan automatik digabungkan menjadi tempahan sebenar.
+            {t("import.desc", "Pindahkan rekod tempahan lengkap dari Google AI Studio bagi Kemaman 1, Kemaman 2, dan Gong Badak ke dalam sistem ERP. Tarikh berturutan akan automatik digabungkan menjadi tempahan sebenar.")}
           </p>
         </div>
 
@@ -159,7 +162,7 @@ export default function ImportPage() {
             className="inline-flex items-center gap-2 px-4 py-3 bg-[#111726] hover:bg-slate-800 text-indigo-300 border border-indigo-800/50 rounded-xl text-xs font-bold transition shadow-md"
           >
             <ExternalLink className="w-4 h-4 text-indigo-400" />
-            <span>Buka Link API Planner</span>
+            <span>{t("import.open_api_btn", "Buka Link API Planner")}</span>
           </a>
         </div>
       </div>
@@ -173,8 +176,12 @@ export default function ImportPage() {
                 <Check className="w-6 h-6 stroke-[3]" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Import Penuh Berjaya!</h3>
-                <p className="text-xs text-emerald-300">Semua rekod tempahan dari Januari hingga sekarang telah dimasukkan.</p>
+                <h3 className="text-lg font-black text-white">
+                  {t("import.success_title", "Import Penuh Berjaya!")}
+                </h3>
+                <p className="text-xs text-emerald-300">
+                  {t("import.success_desc", "Semua rekod tempahan dari Januari hingga sekarang telah dimasukkan.")}
+                </p>
               </div>
             </div>
 
@@ -183,33 +190,45 @@ export default function ImportPage() {
                 href="/calendar"
                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs transition"
               >
-                Lihat di Kalendar →
+                {t("import.view_calendar", "Lihat di Kalendar →")}
               </Link>
               <Link
                 href="/"
                 className="px-4 py-2 bg-[#0D121D] hover:bg-slate-800 text-white font-bold rounded-xl text-xs border border-slate-700 transition"
               >
-                Ke Dashboard
+                {t("import.to_dashboard", "Ke Dashboard")}
               </Link>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div className="p-4 rounded-2xl bg-[#080B11]/80 border border-emerald-800/60">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Jumlah Tempahan</span>
-              <div className="text-2xl font-black text-white mt-1">{summary.totalReservations} Tempahan</div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                {t("import.stat_total_bookings", "Jumlah Tempahan")}
+              </span>
+              <div className="text-2xl font-black text-white mt-1">
+                {summary.totalReservations} {t("import.unit_resv", "Tempahan")}
+              </div>
             </div>
             <div className="p-4 rounded-2xl bg-[#080B11]/80 border border-emerald-800/60">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Jumlah Malam Ditempah</span>
-              <div className="text-2xl font-black text-emerald-400 mt-1">{summary.totalNights} Malam</div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                {t("import.stat_total_nights", "Jumlah Malam Ditempah")}
+              </span>
+              <div className="text-2xl font-black text-emerald-400 mt-1">
+                {summary.totalNights} {t("import.unit_nights", "Malam")}
+              </div>
             </div>
             <div className="p-4 rounded-2xl bg-[#080B11]/80 border border-emerald-800/60">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Pecahan Unit Homestay</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                {t("import.stat_breakdown", "Pecahan Unit Homestay")}
+              </span>
               <div className="text-xs text-slate-200 mt-1 space-y-0.5">
                 {summary.homestaySummaries && Object.entries(summary.homestaySummaries).map(([name, s]: any) => (
                   <div key={name} className="flex justify-between font-mono text-[11px]">
                     <span className="text-slate-300">{name}:</span>
-                    <span className="font-bold text-indigo-300">{s.reservations} resv ({s.nights}m)</span>
+                    <span className="font-bold text-indigo-300">
+                      {s.reservations} {t("import.unit_resv", "resv")} ({s.nights} {t("import.unit_nights", "m")})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -237,17 +256,17 @@ export default function ImportPage() {
           <div className="p-6 rounded-2xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-4">
             <h2 className="text-sm font-black text-white flex items-center gap-2">
               <Clipboard className="w-4 h-4 text-indigo-400" />
-              <span>3 Langkah Mudah Memindahkan Semua Data:</span>
+              <span>{t("import.steps_title", "3 Langkah Mudah Memindahkan Semua Data:")}</span>
             </h2>
 
             <ol className="space-y-3 text-slate-300 leading-relaxed">
               <li className="p-3 bg-[#111726] rounded-xl border border-slate-800">
                 <div className="font-bold text-white flex items-center gap-2 mb-1">
                   <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">1</span>
-                  Buka Link Data Planner
+                  {t("import.step1_title", "Buka Link Data Planner")}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Klik butang biru di bawah untuk buka data JSON Booking Planner anda di tab baru pelayar.
+                  {t("import.step1_desc", "Klik butang biru di bawah untuk buka data JSON Booking Planner anda di tab baru pelayar.")}
                 </p>
                 <a
                   href={plannerApiUrl}
@@ -255,7 +274,7 @@ export default function ImportPage() {
                   rel="noreferrer"
                   className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:underline"
                 >
-                  <span>Buka Tab Data Booking Planner</span>
+                  <span>{t("import.step1_link", "Buka Tab Data Booking Planner")}</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </li>
@@ -263,20 +282,20 @@ export default function ImportPage() {
               <li className="p-3 bg-[#111726] rounded-xl border border-slate-800">
                 <div className="font-bold text-white flex items-center gap-2 mb-1">
                   <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
-                  Salin Semua Teks (Copy)
+                  {t("import.step2_title", "Salin Semua Teks (Copy)")}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Di tab baru yang terbuka, tekan <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">Ctrl + A</kbd> (Select All), kemudian tekan <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">Ctrl + C</kbd> (Copy).
+                  {t("import.step2_desc", "Di tab baru yang terbuka, tekan Ctrl + A (Select All), kemudian tekan Ctrl + C (Copy).")}
                 </p>
               </li>
 
               <li className="p-3 bg-[#111726] rounded-xl border border-slate-800">
                 <div className="font-bold text-white flex items-center gap-2 mb-1">
                   <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">3</span>
-                  Tampal & Tekan Import
+                  {t("import.step3_title", "Tampal & Tekan Import")}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Tampal (<kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">Ctrl + V</kbd>) ke dalam kotak teks di sebelah dan tekan butang hijau. Sistem automatik menyusun tempahan mengikut tarikh sebenar!
+                  {t("import.step3_desc", "Tampal (Ctrl + V) ke dalam kotak teks di sebelah dan tekan butang hijau. Sistem automatik menyusun tempahan mengikut tarikh sebenar!")}
                 </p>
               </li>
             </ol>
@@ -287,14 +306,14 @@ export default function ImportPage() {
         <div className="lg:col-span-7 p-6 rounded-2xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-black text-white">Kotak Tampal Data (JSON)</h2>
-              <p className="text-xs text-slate-400">Tampal teks JSON yang disalin dari Google AI Studio di sini.</p>
+              <h2 className="text-sm font-black text-white">{t("import.paste_title", "Kotak Tampal Data (JSON)")}</h2>
+              <p className="text-xs text-slate-400">{t("import.paste_desc", "Tampal teks JSON yang disalin dari Google AI Studio di sini.")}</p>
             </div>
             <button
               onClick={() => setJsonInput(fullYearSampleJson)}
               className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
             >
-              Guna Data Sepenuh Tahun (Contoh)
+              {t("import.use_sample", "Guna Data Sepenuh Tahun (Contoh)")}
             </button>
           </div>
 
@@ -302,13 +321,13 @@ export default function ImportPage() {
             rows={14}
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
-            placeholder="Tampal data JSON Booking Planner anda di sini... (Ctrl + V)"
+            placeholder={t("import.placeholder", "Tampal data JSON Booking Planner anda di sini... (Ctrl + V)")}
             className="w-full p-4 bg-[#080B11] border border-slate-800 rounded-2xl text-xs font-mono text-cyan-300 focus:border-indigo-500 focus:outline-hidden leading-relaxed"
           />
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
             <span className="text-[11px] text-slate-500">
-              *Tarikh berturutan dengan tetamu sama akan automatik digabungkan.
+              {t("import.note_merge", "*Tarikh berturutan dengan tetamu sama akan automatik digabungkan.")}
             </span>
             <button
               onClick={handleImportJson}
@@ -316,7 +335,7 @@ export default function ImportPage() {
               className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 flex items-center justify-center gap-2 shrink-0"
             >
               <FileUp className="w-4 h-4" />
-              <span>{isSyncing ? "Sedang Memproses Rekod..." : "Import Semua Tempahan (Jan - Sekarang)"}</span>
+              <span>{isSyncing ? t("import.btn_importing", "Sedang Memproses Rekod...") : t("import.btn_import_all", "Import Semua Tempahan (Jan - Sekarang)")}</span>
             </button>
           </div>
         </div>

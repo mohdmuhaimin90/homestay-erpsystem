@@ -23,8 +23,10 @@ import {
 import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
 import { formatCurrency, formatDate, generateWhatsAppUrl } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function DashboardPage() {
+  const { t, language } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [chartPeriod, setChartPeriod] = useState<"month" | "quarter" | "year">("month");
@@ -85,17 +87,23 @@ export default function DashboardPage() {
 
   const getCheckInWhatsAppMessage = (b: Booking) => {
     const propName = b.property?.name || "Homestay Kenangan";
-    const guestName = b.guest?.name || "Tuan/Puan";
+    const guestName = b.guest?.name || (language === "bm" ? "Tuan/Puan" : "Guest");
     const lockCode = b.property?.smartlock_code || "1234#";
     const wifi = b.property?.wifi_ssid || "HomestayKenangan";
     const wifiPass = b.property?.wifi_password || "kenangan2026!";
     const mapsLink = b.property?.google_maps_url || "https://homestay-kenangan.vercel.app/";
+    if (language === "en") {
+      return `Dear ${guestName},\n\nWelcome to ${propName}! 🏡\n\nHere are your Check-in details:\n🕒 Check-in Time: 3:00 PM\n🔑 Smartlock PIN: ${lockCode}\n📶 WiFi: ${wifi} (Password: ${wifiPass})\n📍 Location Map: ${mapsLink}\n\nIf you have any questions during your stay, please contact us here. Have a great vacation!`;
+    }
     return `Salam sejahtera ${guestName},\n\nSelamat datang ke ${propName}! 🏡\n\nBerikut adalah maklumat kemasukan (Check-in):\n🕒 Waktu Check-in: 3:00 Petang\n🔑 Kod Pintu Smartlock: ${lockCode}\n📶 WiFi: ${wifi} (Password: ${wifiPass})\n📍 Pautan Lokasi: ${mapsLink}\n\nSekiranya ada apa-apa pertanyaan semasa penginapan, sila hubungi kami di talian ini. Selamat bercuti!`;
   };
 
   const getCheckOutWhatsAppMessage = (b: Booking) => {
     const propName = b.property?.name || "Homestay Kenangan";
-    const guestName = b.guest?.name || "Tuan/Puan";
+    const guestName = b.guest?.name || (language === "bm" ? "Tuan/Puan" : "Guest");
+    if (language === "en") {
+      return `Dear ${guestName},\n\nThank you for choosing ${propName} for your family holiday! ❤️\n\nWe hope you enjoyed your stay. Once the keys are in place and electrical appliances are turned off, your security deposit of RM ${b.deposit_amount || 100} will be refunded shortly.\n\nSee you again next time!`;
+    }
     return `Salam sejahtera ${guestName},\n\nTerima kasih kerana memilih ${propName} untuk percutian anda sekeluarga! ❤️\n\nKami berharap anda berpuas hati sepanjang penginapan. Sekiranya kunci sudah diletakkan di tempat asal dan suis elektrik dipadamkan, deposit keselamatan anda sebanyak RM ${b.deposit_amount || 100} akan dipulangkan sebentar lagi.\n\nJumpa lagi di lain masa!`;
   };
 
@@ -113,10 +121,12 @@ export default function DashboardPage() {
                 <span>BASIC</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                Selamat Datang ke Homestay Kenangan 🏡
+                {language === "bm" ? "Selamat Datang ke Homestay Kenangan 🏡" : "Welcome to Homestay Kenangan 🏡"}
               </h1>
               <p className="text-base text-slate-300 mt-2 max-w-xl font-medium">
-                Pusat kawalan homestay yang pantas dan mudah. Kemaman 1 & 2 (Terengganu) dan Gong Badak (Kuala Terengganu).
+                {language === "bm" 
+                  ? "Pusat kawalan homestay yang pantas dan mudah. Kemaman 1 & 2 (Terengganu) dan Gong Badak (Kuala Terengganu)."
+                  : "Fast and intuitive property command center for Kemaman 1 & 2 and Gong Badak."}
               </p>
             </div>
 
@@ -125,7 +135,7 @@ export default function DashboardPage() {
               className="px-6 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base shadow-xl shadow-amber-500/20 transition-all hover:scale-105 flex items-center gap-3 shrink-0"
             >
               <PlusCircle className="w-6 h-6" />
-              <span>+ Daftar Tetamu Baru</span>
+              <span>{t("dashboard.btn_register_guest")}</span>
             </Link>
           </div>
         </div>
@@ -140,19 +150,19 @@ export default function DashboardPage() {
                   🛎️
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-white">Tetamu Masuk Hari Ini</h2>
-                  <p className="text-xs text-slate-400">Tarikh: {formatDate(todayStr)}</p>
+                  <h2 className="text-xl font-black text-white">{t("dashboard.checkin_today")}</h2>
+                  <p className="text-xs text-slate-400">{language === "bm" ? "Tarikh:" : "Date:"} {formatDate(todayStr)}</p>
                 </div>
               </div>
               <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 font-black text-sm border border-emerald-800/60">
-                {todayCheckIns.length} Tetamu
+                {todayCheckIns.length} {language === "bm" ? "Tetamu" : "Guests"}
               </span>
             </div>
 
             {todayCheckIns.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
-                <p className="text-sm font-bold text-slate-300">Tiada tetamu baru masuk hari ini.</p>
-                <p className="text-xs text-slate-400">Semua bilik yang berpenghuni sedang berjalan seperti biasa.</p>
+                <p className="text-sm font-bold text-slate-300">{t("dashboard.checkin_none")}</p>
+                <p className="text-xs text-slate-400">{t("dashboard.checkin_none_sub")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -160,7 +170,7 @@ export default function DashboardPage() {
                   <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-lg font-black text-white">{b.guest?.name || "Tetamu"}</div>
+                        <div className="text-lg font-black text-white">{b.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
                         <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
                         <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-mono">
                           <Phone className="w-3.5 h-3.5" /> {b.guest?.phone || "-"}
@@ -179,7 +189,7 @@ export default function DashboardPage() {
                         className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02]"
                       >
                         <MessageCircle className="w-5 h-5" />
-                        <span>Hantar Kod Pintu & Alamat ke WhatsApp</span>
+                        <span>{language === "bm" ? "Hantar Kod Pintu & Alamat ke WhatsApp" : "Send Door PIN & Address via WhatsApp"}</span>
                       </a>
                     )}
                   </div>
@@ -196,19 +206,19 @@ export default function DashboardPage() {
                   🚪
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-white">Tetamu Keluar Hari Ini</h2>
-                  <p className="text-xs text-slate-400">Check-out sebelum 12:00 tengah hari</p>
+                  <h2 className="text-xl font-black text-white">{t("dashboard.checkout_today")}</h2>
+                  <p className="text-xs text-slate-400">{language === "bm" ? "Check-out sebelum 12:00 tengah hari" : "Check-out before 12:00 PM"}</p>
                 </div>
               </div>
               <span className="px-3 py-1 rounded-xl bg-rose-950 text-rose-400 font-black text-sm border border-rose-800/60">
-                {todayCheckOuts.length} Tetamu
+                {todayCheckOuts.length} {language === "bm" ? "Tetamu" : "Guests"}
               </span>
             </div>
 
             {todayCheckOuts.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
-                <p className="text-sm font-bold text-slate-300">Tiada tetamu keluar hari ini.</p>
-                <p className="text-xs text-slate-400">Tiada keperluan untuk pembersihan bilik serta-merta hari ini.</p>
+                <p className="text-sm font-bold text-slate-300">{t("dashboard.checkout_none")}</p>
+                <p className="text-xs text-slate-400">{language === "bm" ? "Tiada keperluan untuk pembersihan bilik serta-merta hari ini." : "No immediate room turnover required today."}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -216,9 +226,9 @@ export default function DashboardPage() {
                   <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-lg font-black text-white">{b.guest?.name || "Tetamu"}</div>
+                        <div className="text-lg font-black text-white">{b.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
                         <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
-                        <div className="text-xs text-slate-400 mt-1">Deposit Perlu Pulang: RM {b.deposit_amount || 100}</div>
+                        <div className="text-xs text-slate-400 mt-1">{language === "bm" ? "Deposit Perlu Pulang:" : "Refund Deposit:"} RM {b.deposit_amount || 100}</div>
                       </div>
                       <span className="text-xs font-black text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-800">
                         Check-out
@@ -233,7 +243,7 @@ export default function DashboardPage() {
                         className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-sm flex items-center justify-center gap-2 border border-slate-700 transition"
                       >
                         <MessageCircle className="w-5 h-5 text-emerald-400" />
-                        <span>Hantar WhatsApp Terima Kasih & Deposit</span>
+                        <span>{language === "bm" ? "Hantar WhatsApp Terima Kasih & Deposit" : "Send WhatsApp Thank You & Deposit"}</span>
                       </a>
                     )}
                   </div>
@@ -248,17 +258,17 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                <span>🛌 Status Bilik & Sewaan Hari Ini</span>
+                <span>🛌 {t("dashboard.room_status_today")}</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Status ketersediaan Homestay Kenangan Kemaman & Gong Badak.
+                {t("dashboard.room_status_sub")}
               </p>
             </div>
             <Link
               href="/calendar"
               className="text-xs font-bold text-indigo-400 hover:underline flex items-center gap-1"
             >
-              <span>Buka Kalendar Penuh</span>
+              <span>{t("dashboard.open_full_calendar")}</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -289,7 +299,7 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400">
-                        {p.total_rooms} Bilik · {p.total_toilets ? `${p.total_toilets} Toilet · ` : ""}{p.total_bathrooms || 1} Bath
+                        {p.total_rooms} {language === "bm" ? "Bilik" : "Rooms"} · {p.total_toilets ? `${p.total_toilets} ${language === "bm" ? "Toilet" : "Toilet"} · ` : ""}{p.total_bathrooms || 1} Bath
                       </span>
                       {isMonthly ? (
                         <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black">
@@ -297,11 +307,11 @@ export default function DashboardPage() {
                         </span>
                       ) : activeBooking ? (
                         <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[11px] font-black">
-                          🔒 ADA TETAMU
+                          🔒 {language === "bm" ? "ADA TETAMU" : "OCCUPIED"}
                         </span>
                       ) : (
                         <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] font-black animate-pulse">
-                          ✅ KOSONG - BOLEH SEWA
+                          ✅ {language === "bm" ? "KOSONG - BOLEH SEWA" : "AVAILABLE - READY"}
                         </span>
                       )}
                     </div>
@@ -311,24 +321,24 @@ export default function DashboardPage() {
 
                   {isMonthly ? (
                     <div className="p-3.5 rounded-xl bg-black/40 border border-amber-900/40 text-xs space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-amber-400 block">Sewaan Bilik Bulanan Tetap:</span>
+                      <span className="text-[10px] uppercase font-bold text-amber-400 block">{t("dashboard.monthly_fixed_rate")}</span>
                       <div className="text-xl font-black text-white">
-                        RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ bulan</span>
+                        RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ {language === "bm" ? "bulan" : "month"}</span>
                       </div>
                       <div className="text-[11px] text-slate-400">
-                        Rumah belakang (2 bilik 1 toilet 1 bathroom)
+                        {language === "bm" ? "Rumah belakang (2 bilik 1 toilet 1 bathroom)" : "Back house (2 bedrooms 1 toilet 1 bathroom)"}
                       </div>
                     </div>
                   ) : activeBooking ? (
                     <div className="p-3.5 rounded-xl bg-black/40 border border-rose-900/40 text-xs space-y-1">
-                      <div className="text-rose-200 font-bold">Tetamu: {activeBooking.guest?.name || "Tetamu"}</div>
+                      <div className="text-rose-200 font-bold">{language === "bm" ? "Tetamu:" : "Guest:"} {activeBooking.guest?.name || "Guest"}</div>
                       <div className="text-slate-400 text-[11px]">
-                        Keluar: {formatDate(activeBooking.check_out)}
+                        {language === "bm" ? "Keluar:" : "Check-out:"} {formatDate(activeBooking.check_out)}
                       </div>
                     </div>
                   ) : (
                     <div className="p-3.5 rounded-xl bg-black/40 border border-emerald-900/40 text-xs space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Kadar Sewaan Hari Ini:</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">{t("dashboard.daily_rate_today")}</span>
                       <div className="flex items-center justify-between">
                         <span className="text-emerald-400 font-bold">Direct WA:</span>
                         <span className="text-white font-black">{formatCurrency(p.price_direct || p.base_price_per_night)}</span>
@@ -341,12 +351,12 @@ export default function DashboardPage() {
                   )}
 
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-mono">Pintu: {p.smartlock_code}</span>
+                    <span className="text-slate-400 font-mono">{language === "bm" ? "Pintu:" : "Door:"} {p.smartlock_code}</span>
                     <Link
                       href="/properties"
                       className="text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
                     >
-                      Butiran Unit →
+                      {language === "bm" ? "Butiran Unit →" : "Unit Details →"}
                     </Link>
                   </div>
                 </div>
@@ -364,13 +374,19 @@ export default function DashboardPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
-            FRIDAY · 20 SEPTEMBER 2026 · PEAK SEASON
+            {language === "bm" ? "JUMAAT · 20 SEPTEMBER 2026 · MUSIM PUNCAK" : "FRIDAY · 20 SEPTEMBER 2026 · PEAK SEASON"}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1 flex items-center gap-2">
-            Property <span className="text-indigo-400">Performance</span>
+            {language === "bm" ? (
+              <>Prestasi <span className="text-indigo-400">Homestay</span></>
+            ) : (
+              <>Property <span className="text-indigo-400">Performance</span></>
+            )}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time occupancy, revenue metrics, and upcoming arrivals for Damai Homestay.
+            {language === "bm" 
+              ? "Kadar penginapan masa nyata, metrik pendapatan, dan tetamu masuk untuk Homestay Kenangan."
+              : "Real-time occupancy, revenue metrics, and upcoming arrivals for Homestay Kenangan."}
           </p>
         </div>
 
@@ -379,7 +395,7 @@ export default function DashboardPage() {
           {/* Month Selector */}
           <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0E1320] border border-slate-800 text-xs font-semibold text-slate-300 hover:border-slate-700 transition">
             <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-            <span>September 2026</span>
+            <span>{language === "bm" ? "September 2026" : "September 2026"}</span>
             <ChevronDown className="w-3 h-3 text-slate-500" />
           </button>
 
@@ -387,7 +403,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0E1320] border border-slate-800 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[11px] font-semibold">
-              <span className="text-emerald-400 font-bold">LIVE</span> Auto-refresh: 5m
+              <span className="text-emerald-400 font-bold">LIVE</span> {language === "bm" ? "Auto-kemaskini: 5m" : "Auto-refresh: 5m"}
             </span>
           </div>
         </div>
@@ -399,7 +415,9 @@ export default function DashboardPage() {
           {/* Left: Occupancy Big Number */}
           <div className="flex items-baseline gap-2.5 shrink-0">
             <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">83.3%</span>
-            <span className="text-xs font-black tracking-wider text-slate-400 uppercase">OCCUPANCY</span>
+            <span className="text-xs font-black tracking-wider text-slate-400 uppercase">
+              {language === "bm" ? "KADAR PENGINAPAN" : "OCCUPANCY"}
+            </span>
           </div>
 
           {/* Center: Multi-Color Progress Bar & Legend */}
@@ -416,19 +434,19 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-cyan-400" />
-                <span className="text-slate-300 font-bold">30</span> Occupied
+                <span className="text-slate-300 font-bold">30</span> {language === "bm" ? "Ada Tetamu" : "Occupied"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-indigo-500" />
-                <span className="text-slate-300 font-bold">{todayCheckIns.length || 2}</span> Arriving Today
+                <span className="text-slate-300 font-bold">{todayCheckIns.length || 2}</span> {language === "bm" ? "Masuk Hari Ini" : "Arriving Today"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-rose-500" />
-                <span className="text-slate-300 font-bold">{todayCheckOuts.length || 1}</span> Departing
+                <span className="text-slate-300 font-bold">{todayCheckOuts.length || 1}</span> {language === "bm" ? "Keluar Hari Ini" : "Departing"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-slate-600" />
-                <span className="text-slate-300 font-bold">8</span> Available
+                <span className="text-slate-300 font-bold">8</span> {language === "bm" ? "Kosong" : "Available"}
               </span>
             </div>
           </div>
@@ -445,11 +463,11 @@ export default function DashboardPage() {
             </div>
             <div>
               <div className="text-base font-black text-white">RM 14.9K</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TONIGHT REV</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "bm" ? "MALAM INI" : "TONIGHT REV"}</div>
             </div>
             <div>
               <div className="text-base font-black text-amber-400">4.88 ★</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AVG RATING</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "bm" ? "PENILAIAN" : "AVG RATING"}</div>
             </div>
           </div>
         </div>
@@ -469,8 +487,10 @@ export default function DashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black text-white tracking-tight">{formatCurrency(totalRevenue)}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">MONTHLY REVENUE</div>
-            <div className="text-[10px] text-slate-400 mt-1">vs. RM 14,450 last month</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {language === "bm" ? "JUMLAH PENDAPATAN" : "MONTHLY REVENUE"}
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "berbanding RM 14,450 bulan lepas" : "vs. RM 14,450 last month"}</div>
           </div>
         </div>
 
@@ -486,8 +506,10 @@ export default function DashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black text-white tracking-tight">{bookings.length}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">RESERVATIONS MTD</div>
-            <div className="text-[10px] text-slate-400 mt-1">6 new since yesterday</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {language === "bm" ? "JUMLAH TEMPAHAN" : "RESERVATIONS MTD"}
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "6 baru sejak semalam" : "6 new since yesterday"}</div>
           </div>
         </div>
 
@@ -498,13 +520,15 @@ export default function DashboardPage() {
               <Moon className="w-4 h-4" />
             </div>
             <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
-              ▲ 0.4 nights
+              ▲ 0.4 {language === "bm" ? "malam" : "nights"}
             </span>
           </div>
           <div>
             <div className="text-2xl font-black text-white tracking-tight">{avgStay}</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">AVG LENGTH OF STAY</div>
-            <div className="text-[10px] text-slate-400 mt-1">Nights per booking</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {language === "bm" ? "PURATA TEMPOH INAP" : "AVG LENGTH OF STAY"}
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "Malam setiap tempahan" : "Nights per booking"}</div>
           </div>
         </div>
 
@@ -520,8 +544,10 @@ export default function DashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black text-white tracking-tight">0.0%</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">CANCELLATION RATE</div>
-            <div className="text-[10px] text-slate-400 mt-1">Zero cancellations this month</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {language === "bm" ? "KADAR PEMBATALAN" : "CANCELLATION RATE"}
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "Sifar pembatalan bulan ini" : "Zero cancellations this month"}</div>
           </div>
         </div>
 
@@ -537,8 +563,10 @@ export default function DashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black text-white tracking-tight">44.2%</div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">REPEAT GUEST RATE</div>
-            <div className="text-[10px] text-slate-400 mt-1">High customer retention</div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {language === "bm" ? "TETAMU BERULANG" : "REPEAT GUEST RATE"}
+            </div>
+            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "Kesetiaan tetamu tinggi" : "High customer retention"}</div>
           </div>
         </div>
       </div>
@@ -550,10 +578,10 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="font-extrabold text-white text-sm tracking-tight">
-                Revenue Per Available Room
+                {language === "bm" ? "Hasil Mengikut Bilik Ketersediaan" : "Revenue Per Available Room"}
               </h2>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                RevPAR trend — September 2026 vs August 2026
+                {language === "bm" ? "Trend RevPAR bulanan" : "RevPAR trend — September 2026 vs August 2026"}
               </p>
             </div>
 
@@ -565,7 +593,7 @@ export default function DashboardPage() {
                   chartPeriod === "month" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-400 hover:text-white"
                 }`}
               >
-                Month
+                {language === "bm" ? "Bulan" : "Month"}
               </button>
               <button
                 onClick={() => setChartPeriod("quarter")}
@@ -573,7 +601,7 @@ export default function DashboardPage() {
                   chartPeriod === "quarter" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-400 hover:text-white"
                 }`}
               >
-                Quarter
+                {language === "bm" ? "Suku" : "Quarter"}
               </button>
               <button
                 onClick={() => setChartPeriod("year")}
@@ -581,7 +609,7 @@ export default function DashboardPage() {
                   chartPeriod === "year" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-400 hover:text-white"
                 }`}
               >
-                Year
+                {language === "bm" ? "Tahun" : "Year"}
               </button>
             </div>
           </div>
@@ -666,10 +694,10 @@ export default function DashboardPage() {
         <div className="lg:col-span-4 p-6 rounded-2xl bg-[#0D121D] border border-slate-800/90 shadow-xl space-y-4 flex flex-col justify-between">
           <div>
             <h2 className="font-extrabold text-white text-sm tracking-tight">
-              Booking Channels
+              {language === "bm" ? "Saluran Tempahan" : "Booking Channels"}
             </h2>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Source mix this month
+              {language === "bm" ? "Pecahan sumber tempahan" : "Source mix this month"}
             </p>
           </div>
 
@@ -719,7 +747,9 @@ export default function DashboardPage() {
               {/* Glowing Center Label */}
               <div className="absolute flex flex-col items-center justify-center text-center">
                 <span className="text-xl font-black text-white leading-none">{bookings.length}</span>
-                <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase mt-0.5">BOOKINGS</span>
+                <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase mt-0.5">
+                  {language === "bm" ? "TEMPAHAN" : "BOOKINGS"}
+                </span>
               </div>
             </div>
           </div>
@@ -759,15 +789,17 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-extrabold text-white text-base tracking-tight">
-              Recent Reservations
+              {t("dashboard.recent_bookings")}
             </h2>
-            <p className="text-xs text-slate-400">All bookings across Direct, Airbnb, and Booking.com</p>
+            <p className="text-xs text-slate-400">
+              {language === "bm" ? "Semua tempahan melalui Direct, Airbnb, dan Booking.com" : "All bookings across Direct, Airbnb, and Booking.com"}
+            </p>
           </div>
           <Link
             href="/bookings"
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#111726] border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition"
           >
-            <span>View All</span>
+            <span>{language === "bm" ? "Lihat Semua" : "View All"}</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -776,20 +808,20 @@ export default function DashboardPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#111726] text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-800">
               <tr>
-                <th className="py-3 px-4">Guest</th>
-                <th className="py-3 px-4">Unit</th>
-                <th className="py-3 px-4">Dates</th>
-                <th className="py-3 px-4">Total</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Channel</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                <th className="py-3 px-4">{t("bookings.col_guest")}</th>
+                <th className="py-3 px-4">{t("bookings.col_property")}</th>
+                <th className="py-3 px-4">{t("bookings.col_dates")}</th>
+                <th className="py-3 px-4">{t("bookings.col_total")}</th>
+                <th className="py-3 px-4">{t("bookings.col_status")}</th>
+                <th className="py-3 px-4">{t("bookings.col_channel")}</th>
+                <th className="py-3 px-4 text-right">{t("bookings.col_actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {bookings.map((bk) => (
                 <tr key={bk.id} className="hover:bg-slate-800/30 transition">
                   <td className="py-3.5 px-4">
-                    <div className="font-bold text-white text-xs">{bk.guest?.name || "Guest"}</div>
+                    <div className="font-bold text-white text-xs">{bk.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
                     <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                       <Phone className="w-3 h-3" /> {bk.guest?.phone || "-"}
                     </div>
@@ -799,7 +831,7 @@ export default function DashboardPage() {
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="font-bold text-slate-200">{formatDate(bk.check_in)}</div>
-                    <div className="text-[10px] text-slate-400">to {formatDate(bk.check_out)} ({bk.total_nights}n)</div>
+                    <div className="text-[10px] text-slate-400">to {formatDate(bk.check_out)} ({bk.total_nights} {language === "bm" ? "m" : "n"})</div>
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="font-black text-indigo-300">{formatCurrency(bk.total_price)}</div>

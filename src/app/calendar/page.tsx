@@ -19,8 +19,10 @@ import {
 import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
 import { formatCurrency, formatDate, generateWhatsAppUrl } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function CalendarPage() {
+  const { t, language } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -39,7 +41,8 @@ export default function CalendarPage() {
   const month = currentDate.getMonth();
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthName = currentDate.toLocaleString("ms-MY", { month: "long", year: "numeric" });
+  const monthLocale = language === "bm" ? "ms-MY" : "en-US";
+  const monthName = currentDate.toLocaleString(monthLocale, { month: "long", year: "numeric" });
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
@@ -71,13 +74,17 @@ export default function CalendarPage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-950/80 text-indigo-400 text-[10px] font-black tracking-wider uppercase border border-indigo-800/60 mb-2">
             <Sparkles className="w-3 h-3 text-indigo-400" />
-            <span>MATRIKS KETERSEDIAAN HOMESTAY · KEMAMAN & GONG BADAK</span>
+            <span>{t("calendar.badge")}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            Kalendar Tempahan & <span className="text-indigo-400">Jadual Bilik</span>
+            {language === "bm" ? (
+              <>Kalendar Tempahan & <span className="text-indigo-400">Jadual Bilik</span></>
+            ) : (
+              <>Booking Calendar & <span className="text-indigo-400">Room Schedule</span></>
+            )}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Semak tarikh yang telah ditempah dan kosong dari Januari hingga Disember untuk elak *double booking*.
+            {t("calendar.subtitle")}
           </p>
         </div>
 
@@ -87,7 +94,7 @@ export default function CalendarPage() {
             <button
               onClick={prevMonth}
               className="p-2 hover:bg-[#182035] rounded-lg text-slate-400 hover:text-white transition"
-              title="Bulan Lepas"
+              title={t("calendar.month_prev")}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -97,7 +104,7 @@ export default function CalendarPage() {
             <button
               onClick={nextMonth}
               className="p-2 hover:bg-[#182035] rounded-lg text-slate-400 hover:text-white transition"
-              title="Bulan Seterusnya"
+              title={t("calendar.month_next")}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -106,10 +113,10 @@ export default function CalendarPage() {
           <Link
             href="/import"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#111726] hover:bg-slate-800 text-indigo-300 border border-indigo-800/50 rounded-xl text-xs font-bold transition"
-            title="Import Data Planner"
+            title={t("calendar.btn_import")}
           >
             <FileUp className="w-4 h-4 text-indigo-400" />
-            <span>Import Planner</span>
+            <span>{t("calendar.btn_import")}</span>
           </Link>
 
           <Link
@@ -117,33 +124,33 @@ export default function CalendarPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-600/30 transition-all hover:-translate-y-0.5"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Tempahan Baru</span>
+            <span>{t("calendar.btn_new_booking")}</span>
           </Link>
         </div>
       </div>
 
-      {/* Status Legend (No green / no purple - uses Cyan, Indigo, Amber, Slate) */}
+      {/* Status Legend */}
       <div className="flex flex-wrap items-center gap-6 text-xs bg-[#0D121D] px-6 py-3.5 rounded-2xl border border-slate-800 shadow-md">
-        <span className="font-extrabold text-slate-400 text-[10px] uppercase tracking-wider">Petunjuk Warna:</span>
+        <span className="font-extrabold text-slate-400 text-[10px] uppercase tracking-wider">{t("calendar.legend")}</span>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-indigo-600 shadow-xs"></span>
-          <span className="text-slate-300 font-bold text-xs">Direct WhatsApp (Confirmed)</span>
+          <span className="text-slate-300 font-bold text-xs">{t("calendar.legend_direct")}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-rose-500 shadow-xs"></span>
-          <span className="text-slate-300 font-bold text-xs">Airbnb</span>
+          <span className="text-slate-300 font-bold text-xs">{t("calendar.legend_airbnb")}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-cyan-400 shadow-xs"></span>
-          <span className="text-slate-300 font-bold text-xs">Booking.com</span>
+          <span className="text-slate-300 font-bold text-xs">{t("calendar.legend_booking")}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-amber-500 shadow-xs"></span>
-          <span className="text-slate-300 font-bold text-xs">Room Rental (Sewa Bulanan)</span>
+          <span className="text-slate-300 font-bold text-xs">{t("calendar.legend_monthly")}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-slate-800 border border-slate-700 shadow-xs"></span>
-          <span className="text-slate-400 font-medium text-xs">Kosong (Available)</span>
+          <span className="text-slate-400 font-medium text-xs">{t("calendar.legend_available")}</span>
         </div>
       </div>
 
@@ -153,11 +160,11 @@ export default function CalendarPage() {
           <thead>
             <tr className="bg-[#080B11] text-white">
               <th className="p-3.5 text-left font-black w-56 sticky left-0 bg-[#080B11] z-20 border-r border-slate-800">
-                Unit Homestay
+                {t("calendar.col_unit")}
               </th>
               {daysArray.map((day) => {
                 const dateObj = new Date(year, month, day);
-                const dayName = dateObj.toLocaleDateString("ms-MY", { weekday: "narrow" });
+                const dayName = dateObj.toLocaleDateString(language === "bm" ? "ms-MY" : "en-US", { weekday: "narrow" });
                 const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
                 return (
                   <th
@@ -184,8 +191,8 @@ export default function CalendarPage() {
                   </div>
                   <div className="text-[11px] text-indigo-400 font-mono mt-0.5">
                     {isMonthlyProp
-                      ? `RM ${prop.monthly_rental_rate || 700}/bln (Sewa Bilik)`
-                      : `${formatCurrency(prop.price_direct || prop.base_price_per_night)} / malam`}
+                      ? `RM ${prop.monthly_rental_rate || 700} ${t("calendar.per_month_room")}`
+                      : `${formatCurrency(prop.price_direct || prop.base_price_per_night)} ${t("calendar.per_night")}`}
                   </div>
                 </td>
                 {daysArray.map((day) => {
@@ -214,7 +221,7 @@ export default function CalendarPage() {
                         >
                           {isStart || day === 1 ? (
                             <span className="truncate w-full text-center leading-tight">
-                              {isMonthlyProp ? "Sewa Bilik" : (booking.guest?.name?.split(" ")[0] || "Guest")}
+                              {isMonthlyProp ? t("calendar.room_rental_tag") : (booking.guest?.name?.split(" ")[0] || "Guest")}
                             </span>
                           ) : (
                             <span className={`w-1.5 h-1.5 rounded-full ${isMonthlyProp ? "bg-slate-950 opacity-60" : "bg-white opacity-80"}`} />
@@ -241,7 +248,7 @@ export default function CalendarPage() {
           <div className="bg-[#0D121D] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="font-black text-white text-base flex items-center gap-2">
-                <Building className="w-5 h-5 text-indigo-400" /> Butiran Tempahan
+                <Building className="w-5 h-5 text-indigo-400" /> {t("calendar.modal_title")}
               </h3>
               <button
                 onClick={() => setSelectedBooking(null)}
@@ -255,34 +262,34 @@ export default function CalendarPage() {
               <div className="bg-[#111726] p-4 rounded-xl border border-slate-800">
                 <div className="font-black text-white text-sm">{selectedBooking.property?.name || "Homestay"}</div>
                 <div className="text-slate-400 mt-1 font-semibold">
-                  📅 {formatDate(selectedBooking.check_in)} ➔ {formatDate(selectedBooking.check_out)} ({selectedBooking.total_nights} Malam)
+                  📅 {formatDate(selectedBooking.check_in)} ➔ {formatDate(selectedBooking.check_out)} ({selectedBooking.total_nights} {t("calendar.malam")})
                 </div>
               </div>
 
               <div className="space-y-2.5 p-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Tetamu:</span>
+                  <span className="text-slate-400">{t("calendar.guest")}:</span>
                   <span className="font-bold text-white">{selectedBooking.guest?.name} ({selectedBooking.guest?.phone})</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Jumlah Harga:</span>
+                  <span className="text-slate-400">{t("calendar.total_price")}:</span>
                   <span className="font-black text-emerald-400">{formatCurrency(selectedBooking.total_price)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Deposit:</span>
+                  <span className="text-slate-400">{t("calendar.deposit")}:</span>
                   <span className="font-black text-indigo-300">{formatCurrency(selectedBooking.deposit_amount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Status Bayaran:</span>
+                  <span className="text-slate-400">{t("calendar.payment_status")}:</span>
                   <span className="font-bold uppercase text-slate-200">{selectedBooking.payment_status}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Saluran Tempahan:</span>
+                  <span className="text-slate-400">{t("calendar.booking_channel")}:</span>
                   <span className="font-bold text-cyan-400 uppercase">{selectedBooking.source}</span>
                 </div>
                 {selectedBooking.notes && (
                   <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                    Catatan: {selectedBooking.notes}
+                    {t("calendar.notes")}: {selectedBooking.notes}
                   </div>
                 )}
               </div>
@@ -303,7 +310,7 @@ export default function CalendarPage() {
                 onClick={() => setSelectedBooking(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
               >
-                Tutup
+                {t("calendar.close")}
               </button>
             </div>
           </div>
