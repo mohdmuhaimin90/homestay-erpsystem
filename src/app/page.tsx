@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [chartPeriod, setChartPeriod] = useState<"month" | "quarter" | "year">("month");
   const [loading, setLoading] = useState(true);
-  const [uiMode, setUiMode] = useState<"EZ" | "PRO">("PRO");
+  const [uiMode, setUiMode] = useState<"Basic" | "Pro">("Pro");
 
   useEffect(() => {
     async function loadData() {
@@ -41,12 +41,18 @@ export default function DashboardPage() {
     loadData();
 
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("damai_ui_mode") as "EZ" | "PRO";
-      if (saved) setUiMode(saved);
+      const saved = localStorage.getItem("damai_ui_mode");
+      if (saved === "Basic" || saved === "Pro") {
+        setUiMode(saved);
+      } else if (saved === "EZ") {
+        setUiMode("Basic");
+      }
 
       const handler = () => {
-        const current = (localStorage.getItem("damai_ui_mode") as "EZ" | "PRO") || "PRO";
-        setUiMode(current);
+        const current = localStorage.getItem("damai_ui_mode");
+        if (current === "Basic" || current === "Pro") {
+          setUiMode(current);
+        }
       };
       window.addEventListener("ui_mode_change", handler);
       return () => window.removeEventListener("ui_mode_change", handler);
@@ -59,6 +65,7 @@ export default function DashboardPage() {
     .filter((b) => b.booking_status !== "cancelled")
     .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
+  // Active bookings today
   const todayCheckIns = bookings.filter((b) => b.check_in === todayStr);
   const todayCheckOuts = bookings.filter((b) => b.check_out === todayStr);
   const confirmedCount = bookings.filter((b) => b.booking_status === "confirmed" || b.booking_status === "checked_in").length;
@@ -91,7 +98,7 @@ export default function DashboardPage() {
     return `Salam sejahtera ${guestName},\n\nTerima kasih kerana memilih ${propName} untuk percutian anda sekeluarga! ❤️\n\nKami berharap anda berpuas hati sepanjang penginapan. Sekiranya kunci sudah diletakkan di tempat asal dan suis elektrik dipadamkan, deposit keselamatan anda sebanyak RM ${b.deposit_amount || 100} akan dipulangkan sebentar lagi.\n\nJumpa lagi di lain masa!`;
   };
 
-  if (uiMode === "EZ") {
+  if (uiMode === "Basic") {
     return (
       <div className="space-y-8 pb-16 max-w-5xl mx-auto">
         {/* Warm Welcome Banner */}
@@ -101,14 +108,14 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider uppercase border border-amber-500/40 mb-3">
-                <Heart className="w-3.5 h-3.5 fill-current text-amber-400" />
-                <span>MOD EZ · KHAS UNTUK IBU BAPA</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>BASIC</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                Salam Sejahtera Mak & Ayah! 🏡
+                Selamat Datang ke Damai Homestay 🏡
               </h1>
               <p className="text-base text-slate-300 mt-2 max-w-xl font-medium">
-                Pusat kawalan homestay yang mudah. Tekan butang hijau untuk terus hantar kunci & alamat ke WhatsApp tetamu.
+                Pusat kawalan homestay yang pantas dan mudah. Tekan butang hijau untuk terus hantar kunci & alamat ke WhatsApp tetamu.
               </p>
             </div>
 

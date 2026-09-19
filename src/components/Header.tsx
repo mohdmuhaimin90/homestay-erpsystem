@@ -7,16 +7,21 @@ import { Search, Bell, Download, Plus, ChevronDown, Sparkles, LogOut, Heart } fr
 
 export default function Header() {
   const router = useRouter();
-  const [uiMode, setUiMode] = useState<"EZ" | "PRO">("PRO");
+  const [uiMode, setUiMode] = useState<"Basic" | "Pro">("Pro");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("damai_ui_mode") as "EZ" | "PRO";
-      if (savedMode) setUiMode(savedMode);
+      const savedMode = localStorage.getItem("damai_ui_mode");
+      if (savedMode === "Basic" || savedMode === "Pro") {
+        setUiMode(savedMode);
+      } else if (savedMode === "EZ") {
+        setUiMode("Basic");
+        localStorage.setItem("damai_ui_mode", "Basic");
+      }
     }
   }, []);
 
-  const toggleMode = (mode: "EZ" | "PRO") => {
+  const toggleMode = (mode: "Basic" | "Pro") => {
     setUiMode(mode);
     if (typeof window !== "undefined") {
       localStorage.setItem("damai_ui_mode", mode);
@@ -40,38 +45,36 @@ export default function Header() {
           <span>/</span>
           <span>Damai Homestay</span>
           <span>/</span>
-          <span className="text-indigo-400 font-semibold">{uiMode === "EZ" ? "Mod EZ" : "Dashboard PRO"}</span>
+          <span className="text-indigo-400 font-semibold">{uiMode === "Basic" ? "Basic" : "Pro"}</span>
         </div>
         <h1 className="text-lg font-black text-white tracking-tight mt-0.5 flex items-center gap-2">
-          {uiMode === "EZ" ? "Pusat Kawalan Keluarga (Mod Mudah)" : "Overview"}
+          {uiMode === "Basic" ? "Pusat Kawalan Homestay" : "Overview"}
         </h1>
       </div>
 
-      {/* Center: DUAL MODE SWITCHER (EZ vs PRO) */}
+      {/* Center: DUAL MODE SWITCHER (Basic vs Pro) */}
       <div className="flex items-center bg-[#0E1320] p-1 rounded-2xl border border-slate-800 shadow-inner">
         <button
-          onClick={() => toggleMode("EZ")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
-            uiMode === "EZ"
+          onClick={() => toggleMode("Basic")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+            uiMode === "Basic"
               ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md shadow-amber-500/20"
               : "text-slate-400 hover:text-white"
           }`}
-          title="Mod Mudah & Tulisan Besar untuk Mak & Ayah"
+          title="Paparan Basic yang ringkas dan mudah"
         >
-          <Heart className="w-3.5 h-3.5 fill-current" />
-          <span>Mod EZ (Ibu Bapa)</span>
+          <span>Basic</span>
         </button>
         <button
-          onClick={() => toggleMode("PRO")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
-            uiMode === "PRO"
+          onClick={() => toggleMode("Pro")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+            uiMode === "Pro"
               ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
               : "text-slate-400 hover:text-white"
           }`}
-          title="Mod Analitik Penuh & Kalendar Matriks"
+          title="Paparan Pro analitik penuh"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Mod PRO</span>
+          <span>Pro</span>
         </button>
       </div>
 
