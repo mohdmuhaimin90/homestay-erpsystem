@@ -29,10 +29,10 @@ export const mockProperties: Property[] = [
     name: "Homestay Kenangan Kemaman 2",
     address: "Chukai, Kemaman, Terengganu (Rumah Depan)",
     rental_type: "daily",
-    base_price_per_night: 220,
-    price_direct: 220,       // Direct WhatsApp
-    price_airbnb: 260,       // Airbnb (caj platform)
-    price_bookingcom: 270,   // Booking.com (caj OTA)
+    base_price_per_night: 180,
+    price_direct: 180,       // Direct WhatsApp
+    price_airbnb: 215,       // Airbnb (caj platform)
+    price_bookingcom: 225,   // Booking.com (caj OTA)
     cleaning_fee: 40,
     deposit_amount: 100,
     total_rooms: 3,
@@ -51,10 +51,10 @@ export const mockProperties: Property[] = [
     name: "Homestay Kenangan Gong Badak",
     address: "Gong Badak, Kuala Terengganu, Terengganu",
     rental_type: "daily",
-    base_price_per_night: 300,
-    price_direct: 300,       // Direct WhatsApp
-    price_airbnb: 350,       // Airbnb
-    price_bookingcom: 365,   // Booking.com
+    base_price_per_night: 350,
+    price_direct: 350,       // Direct WhatsApp
+    price_airbnb: 395,       // Airbnb
+    price_bookingcom: 410,   // Booking.com
     cleaning_fee: 60,
     deposit_amount: 150,
     total_rooms: 4,

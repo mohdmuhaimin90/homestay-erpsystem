@@ -67,10 +67,10 @@ export async function getProperties(): Promise<Property[]> {
         name: "Homestay Kenangan Kemaman 2",
         address: "Chukai, Kemaman, Terengganu (Rumah Depan)",
         rental_type: "daily" as const,
-        base_price_per_night: p.base_price_per_night || 220,
-        price_direct: p.price_direct || 220,
-        price_airbnb: p.price_airbnb || 260,
-        price_bookingcom: p.price_bookingcom || 270,
+        base_price_per_night: p.base_price_per_night || 180,
+        price_direct: p.price_direct || 180,
+        price_airbnb: p.price_airbnb || 215,
+        price_bookingcom: p.price_bookingcom || 225,
         total_rooms: 3,
         total_bathrooms: 1,
         total_toilets: 1,
@@ -87,10 +87,10 @@ export async function getProperties(): Promise<Property[]> {
         name: "Homestay Kenangan Gong Badak",
         address: "Gong Badak, Kuala Terengganu, Terengganu",
         rental_type: "daily" as const,
-        base_price_per_night: p.base_price_per_night || 300,
-        price_direct: p.price_direct || 300,
-        price_airbnb: p.price_airbnb || 350,
-        price_bookingcom: p.price_bookingcom || 365,
+        base_price_per_night: p.base_price_per_night || 350,
+        price_direct: p.price_direct || 350,
+        price_airbnb: p.price_airbnb || 395,
+        price_bookingcom: p.price_bookingcom || 410,
         total_rooms: 4,
         total_bathrooms: 4,
         total_toilets: 4,
@@ -148,7 +148,14 @@ export async function saveBooking(booking: Omit<Booking, "id"> & { id?: string }
 
   if (isSupabaseConfigured && supabase) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { property, guest, ...dbPayload } = booking as any;
+    const { property, guest, total_nights, ...rawPayload } = booking as any;
+    const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const dbPayload: Record<string, any> = { ...rawPayload };
+    if (!isUuid(dbPayload.id || "")) {
+      delete dbPayload.id;
+    }
+    delete dbPayload.total_nights;
+
     const { data, error } = await supabase.from("bookings").insert([dbPayload]).select("*, property:properties(*), guest:guests(*)").single();
     if (!error && data) return data;
   }

@@ -48,7 +48,18 @@ export default function CalendarPage() {
   const getBookingForDay = (propertyId: string, day: number) => {
     const formattedDayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return bookings.find((b) => {
-      if (b.property_id !== propertyId || b.booking_status === "cancelled") return false;
+      if (b.booking_status === "cancelled") return false;
+      const prop = properties.find((p) => p.id === propertyId);
+      const isPropMatch = 
+        b.property_id === propertyId ||
+        (prop && (
+          (b.property?.name && prop.name.toLowerCase() === b.property.name.toLowerCase()) ||
+          (prop.name.toLowerCase().includes("kemaman 1") && (b.property_id === "kemaman-1" || b.property?.name?.toLowerCase().includes("kemaman 1"))) ||
+          (prop.name.toLowerCase().includes("kemaman 2") && (b.property_id === "kemaman-2" || b.property?.name?.toLowerCase().includes("kemaman 2"))) ||
+          (prop.name.toLowerCase().includes("gong badak") && (b.property_id === "gong-badak" || b.property?.name?.toLowerCase().includes("gong badak")))
+        ));
+
+      if (!isPropMatch) return false;
       return formattedDayStr >= b.check_in && formattedDayStr < b.check_out;
     });
   };
@@ -127,6 +138,10 @@ export default function CalendarPage() {
           <span className="text-slate-300 font-bold text-xs">Booking.com</span>
         </div>
         <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-md bg-amber-500 shadow-xs"></span>
+          <span className="text-slate-300 font-bold text-xs">Room Rental (Sewa Bulanan)</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-slate-800 border border-slate-700 shadow-xs"></span>
           <span className="text-slate-400 font-medium text-xs">Kosong (Available)</span>
         </div>
@@ -159,14 +174,18 @@ export default function CalendarPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
-            {properties.map((prop) => (
+            {properties.map((prop) => {
+              const isMonthlyProp = prop.rental_type === "monthly" || prop.id === "kemaman-1" || prop.name?.toLowerCase().includes("kemaman 1");
+              return (
               <tr key={prop.id} className="hover:bg-slate-800/30 transition">
                 <td className="p-3.5 font-black text-white sticky left-0 bg-[#0D121D] z-10 border-r border-slate-800 shadow-md">
                   <div className="truncate max-w-[180px] font-bold text-xs text-white" title={prop.name}>
                     {prop.name}
                   </div>
                   <div className="text-[11px] text-indigo-400 font-mono mt-0.5">
-                    {formatCurrency(prop.price_direct || prop.base_price_per_night)}
+                    {isMonthlyProp
+                      ? `RM ${prop.monthly_rental_rate || 700}/bln (Sewa Bilik)`
+                      : `${formatCurrency(prop.price_direct || prop.base_price_per_night)} / malam`}
                   </div>
                 </td>
                 {daysArray.map((day) => {
@@ -183,20 +202,22 @@ export default function CalendarPage() {
                     >
                       {booking ? (
                         <div
-                          className={`w-full h-full rounded-lg flex flex-col items-center justify-center text-[10px] font-black text-white shadow-md p-1 transition-all hover:scale-105 ${
-                            booking.source === "airbnb"
+                          className={`w-full h-full rounded-lg flex flex-col items-center justify-center text-[10px] font-black shadow-md p-1 transition-all hover:scale-105 ${
+                            isMonthlyProp
+                              ? "bg-amber-500 text-slate-950 shadow-amber-900/30"
+                              : booking.source === "airbnb"
                               ? "bg-rose-600 text-white shadow-rose-900/30"
                               : booking.source === "booking_com"
                               ? "bg-cyan-600 text-white shadow-cyan-900/30"
                               : "bg-indigo-600 text-white shadow-indigo-900/30"
                           }`}
                         >
-                          {isStart ? (
+                          {isStart || day === 1 ? (
                             <span className="truncate w-full text-center leading-tight">
-                              {booking.guest?.name?.split(" ")[0] || "Guest"}
+                              {isMonthlyProp ? "Sewa Bilik" : (booking.guest?.name?.split(" ")[0] || "Guest")}
                             </span>
                           ) : (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white opacity-80" />
+                            <span className={`w-1.5 h-1.5 rounded-full ${isMonthlyProp ? "bg-slate-950 opacity-60" : "bg-white opacity-80"}`} />
                           )}
                         </div>
                       ) : (
@@ -208,7 +229,8 @@ export default function CalendarPage() {
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
