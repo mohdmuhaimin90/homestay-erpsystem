@@ -175,7 +175,8 @@ export async function POST(req: NextRequest) {
 
       for (const resv of mergedReservations) {
         const comment = resv.comment || "";
-        let guestName = "Pelanggan Booking Planner";
+        const isBlockedOrMaintenance = !comment.trim();
+        let guestName = isBlockedOrMaintenance ? "Penyelenggaraan / Blocked" : "Pelanggan Booking Planner";
         let guestPhone = "0120000000";
 
         if (comment.includes("-")) {
@@ -197,16 +198,20 @@ export async function POST(req: NextRequest) {
         const guest = await saveGuest({
           name: guestName,
           phone: guestPhone,
-          notes: `Tetamu ${matchedProp.name} (Import dari Google AI Studio Planner)`,
+          notes: isBlockedOrMaintenance 
+            ? `Penyelenggaraan / Tarikh Disekat ${matchedProp.name}`
+            : `Tetamu ${matchedProp.name} (Import dari Booking Planner)`,
         });
         createdGuests.push(guest);
 
-        // 3. Determine pricing: if 0, use nights * property direct price
-        const calcPrice = resv.totalPrice > 0 
-          ? resv.totalPrice 
-          : (resv.nights * (matchedProp.price_direct || matchedProp.base_price_per_night || (homestayId.includes("gong-badak") ? 350 : 180)));
+        // 3. Determine pricing: only use price from Booking Planner; if missing or 0, set 0
+        const calcPrice = Number(resv.totalPrice || 0);
 
         // 4. Save Booking
+        const noteText = isBlockedOrMaintenance
+          ? `Tarikh Disekat / Penyelenggaraan (${resv.nights} malam)`
+          : `Booking Planner: ${comment} (${resv.nights} malam)`;
+
         const saved = await saveBooking({
           property_id: propId,
           guest_id: guest.id,
@@ -214,11 +219,11 @@ export async function POST(req: NextRequest) {
           check_out: resv.checkOut,
           total_nights: resv.nights,
           total_price: calcPrice,
-          deposit_amount: matchedProp.deposit_amount || 100,
+          deposit_amount: isBlockedOrMaintenance ? 0 : (matchedProp.deposit_amount || 100),
           source: bookingSource,
           booking_status: "confirmed",
-          payment_status: "fully_paid",
-          notes: `Booking Planner: ${comment} (${resv.nights} malam)`,
+          payment_status: calcPrice > 0 ? "fully_paid" : "unpaid",
+          notes: noteText,
           property: matchedProp,
           guest: guest,
         });

@@ -61,29 +61,73 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const [selectedMonth, setSelectedMonth] = useState<string>("2026-09");
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const totalRevenue = bookings
-    .filter((b) => b.booking_status !== "cancelled")
-    .reduce((sum, b) => sum + (b.total_price || 0), 0);
+  // Month-based filtering logic
+  const isAllTime = selectedMonth === "all";
+  const [selYear, selMonthNum] = !isAllTime ? selectedMonth.split("-").map(Number) : [2026, 9];
+  const daysInSelMonth = !isAllTime ? new Date(selYear, selMonthNum, 0).getDate() : 30;
+  const monthStart = `${selectedMonth}-01`;
+  const monthEnd = `${selectedMonth}-${String(daysInSelMonth).padStart(2, "0")}`;
+
+  const currentBookings = bookings.filter((b) => {
+    if (b.booking_status === "cancelled") return false;
+    if (isAllTime) return true;
+    return b.check_in <= monthEnd && b.check_out >= monthStart;
+  });
+
+  const monthRevenue = currentBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+  const monthReservationsCount = currentBookings.length;
+  const monthNights = currentBookings.reduce((sum, b) => sum + (b.total_nights || 1), 0);
+  const avgStay = monthReservationsCount > 0 ? (monthNights / monthReservationsCount).toFixed(1) : "0.0";
 
   // Active bookings today
   const todayCheckIns = bookings.filter((b) => b.check_in === todayStr);
   const todayCheckOuts = bookings.filter((b) => b.check_out === todayStr);
-  const confirmedCount = bookings.filter((b) => b.booking_status === "confirmed" || b.booking_status === "checked_in").length;
+  const confirmedCount = currentBookings.filter((b) => b.booking_status === "confirmed" || b.booking_status === "checked_in").length;
 
-  const totalNights = bookings.reduce((sum, b) => sum + (b.total_nights || 1), 0);
-  const avgStay = bookings.length > 0 ? (totalNights / bookings.length).toFixed(1) : "2.5";
+  // Real occupancy calculation for selected month
+  const totalUnits = properties.length || 3;
+  const totalAvailableNights = isAllTime ? (totalUnits * 365) : (totalUnits * daysInSelMonth);
 
-  // Channel Breakdown
-  const directCount = bookings.filter((b) => b.source === "direct_whatsapp").length || 1;
-  const airbnbCount = bookings.filter((b) => b.source === "airbnb").length || 1;
-  const bookingComCount = bookings.filter((b) => b.source === "booking_com" || b.source === "other" || b.source === "agoda").length || 1;
-  const totalChannels = directCount + airbnbCount + bookingComCount;
+  let occupiedRoomNights = 0;
+  if (!isAllTime) {
+    for (let day = 1; day <= daysInSelMonth; day++) {
+      const dayStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
+      for (const p of properties) {
+        const hasBooking = currentBookings.some((b) => {
+          const matchProp = b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase());
+          return matchProp && dayStr >= b.check_in && dayStr < b.check_out;
+        });
+        if (hasBooking) occupiedRoomNights++;
+      }
+    }
+  } else {
+    occupiedRoomNights = monthNights;
+  }
+
+  const occupancyRate = totalAvailableNights > 0 
+    ? Math.min(100, Math.round((occupiedRoomNights / totalAvailableNights) * 100))
+    : 0;
+
+  const adr = occupiedRoomNights > 0 ? Math.round(monthRevenue / occupiedRoomNights) : 0;
+  const revpar = totalAvailableNights > 0 ? Math.round(monthRevenue / totalAvailableNights) : 0;
+
+  const tonightRevenue = bookings
+    .filter((b) => b.booking_status !== "cancelled" && todayStr >= b.check_in && todayStr < b.check_out)
+    .reduce((sum, b) => sum + Math.round((b.total_price || 0) / (b.total_nights || 1)), 0);
+
+  // Channel Breakdown for active period
+  const activeForChannels = currentBookings.length > 0 ? currentBookings : bookings;
+  const directCount = activeForChannels.filter((b) => b.source === "direct_whatsapp" || (b.source as string) === "direct").length;
+  const airbnbCount = activeForChannels.filter((b) => b.source === "airbnb").length;
+  const bookingComCount = activeForChannels.filter((b) => b.source === "booking_com" || b.source === "agoda" || b.source === "other").length;
+  const totalChannels = directCount + airbnbCount + bookingComCount || 1;
 
   const pDirect = Math.round((directCount / totalChannels) * 100);
-  const pBooking = Math.round((bookingComCount / totalChannels) * 100);
-  const pAirbnb = 100 - pDirect - pBooking;
+  const pAirbnb = Math.round((airbnbCount / totalChannels) * 100);
+  const pBooking = Math.max(0, 100 - pDirect - pAirbnb);
 
   const getCheckInWhatsAppMessage = (b: Booking) => {
     const propName = b.property?.name || "Homestay Kenangan";
@@ -392,12 +436,24 @@ export default function DashboardPage() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-3">
-          {/* Month Selector */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0E1320] border border-slate-800 text-xs font-semibold text-slate-300 hover:border-slate-700 transition">
-            <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-            <span>{language === "bm" ? "September 2026" : "September 2026"}</span>
-            <ChevronDown className="w-3 h-3 text-slate-500" />
-          </button>
+          {/* Interactive Month Selector */}
+          <div className="relative">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="appearance-none flex items-center gap-2 pl-9 pr-8 py-2 rounded-xl bg-[#0E1320] border border-slate-800 text-xs font-bold text-indigo-300 hover:border-slate-700 focus:outline-hidden focus:border-indigo-500 cursor-pointer shadow-md"
+            >
+              <option value="2026-09">{language === "bm" ? "September 2026" : "September 2026"}</option>
+              <option value="2026-08">{language === "bm" ? "Ogos 2026" : "August 2026"}</option>
+              <option value="2026-10">{language === "bm" ? "Oktober 2026" : "October 2026"}</option>
+              <option value="2026-07">{language === "bm" ? "Julai 2026" : "July 2026"}</option>
+              <option value="2026-06">{language === "bm" ? "Jun 2026" : "June 2026"}</option>
+              <option value="2026-05">{language === "bm" ? "Mei 2026" : "May 2026"}</option>
+              <option value="all">{language === "bm" ? "Semua Rekod (All Time)" : "All Records (All Time)"}</option>
+            </select>
+            <CalendarIcon className="w-3.5 h-3.5 text-indigo-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
 
           {/* Live Auto-refresh Pill */}
           <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0E1320] border border-slate-800 text-xs text-slate-300">
@@ -414,7 +470,7 @@ export default function DashboardPage() {
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           {/* Left: Occupancy Big Number */}
           <div className="flex items-baseline gap-2.5 shrink-0">
-            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">83.3%</span>
+            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{occupancyRate}%</span>
             <span className="text-xs font-black tracking-wider text-slate-400 uppercase">
               {language === "bm" ? "KADAR PENGINAPAN" : "OCCUPANCY"}
             </span>
@@ -424,29 +480,35 @@ export default function DashboardPage() {
           <div className="flex-1 space-y-2.5 max-w-3xl">
             {/* Multi-segment Bar */}
             <div className="h-3.5 w-full bg-slate-800/80 rounded-full overflow-hidden flex p-0.5 gap-0.5">
-              <div className="h-full bg-cyan-400 rounded-l-full" style={{ width: "55%" }} title="Occupied" />
-              <div className="h-full bg-indigo-500" style={{ width: "18%" }} title="Arriving Today" />
-              <div className="h-full bg-rose-500" style={{ width: "10%" }} title="Departing" />
-              <div className="h-full bg-slate-700 rounded-r-full" style={{ width: "17%" }} title="Available" />
+              <div 
+                className="h-full bg-cyan-400 rounded-l-full transition-all duration-500" 
+                style={{ width: `${Math.max(5, occupancyRate)}%` }} 
+                title={`Occupied (${occupancyRate}%)`} 
+              />
+              <div 
+                className="h-full bg-slate-700 rounded-r-full transition-all duration-500" 
+                style={{ width: `${Math.max(5, 100 - occupancyRate)}%` }} 
+                title={`Available (${100 - occupancyRate}%)`} 
+              />
             </div>
 
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-cyan-400" />
-                <span className="text-slate-300 font-bold">30</span> {language === "bm" ? "Ada Tetamu" : "Occupied"}
+                <span className="text-slate-300 font-bold">{occupiedRoomNights}</span> {language === "bm" ? "Malam Ditempah" : "Nights Booked"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-indigo-500" />
-                <span className="text-slate-300 font-bold">{todayCheckIns.length || 2}</span> {language === "bm" ? "Masuk Hari Ini" : "Arriving Today"}
+                <span className="text-slate-300 font-bold">{todayCheckIns.length}</span> {language === "bm" ? "Masuk Hari Ini" : "Arriving Today"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-rose-500" />
-                <span className="text-slate-300 font-bold">{todayCheckOuts.length || 1}</span> {language === "bm" ? "Keluar Hari Ini" : "Departing"}
+                <span className="text-slate-300 font-bold">{todayCheckOuts.length}</span> {language === "bm" ? "Keluar Hari Ini" : "Departing"}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-xs bg-slate-600" />
-                <span className="text-slate-300 font-bold">8</span> {language === "bm" ? "Kosong" : "Available"}
+                <span className="text-slate-300 font-bold">{Math.max(0, totalAvailableNights - occupiedRoomNights)}</span> {language === "bm" ? "Malam Kosong" : "Available Nights"}
               </span>
             </div>
           </div>
@@ -454,19 +516,19 @@ export default function DashboardPage() {
           {/* Right: 4 Mini Financial KPIs */}
           <div className="flex items-center gap-5 sm:gap-7 border-t xl:border-t-0 xl:border-l border-slate-800 pt-4 xl:pt-0 xl:pl-6 shrink-0">
             <div>
-              <div className="text-base font-black text-indigo-400">RM 312</div>
+              <div className="text-base font-black text-indigo-400 font-mono">{formatCurrency(adr)}</div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ADR</div>
             </div>
             <div>
-              <div className="text-base font-black text-emerald-400">RM 260</div>
+              <div className="text-base font-black text-emerald-400 font-mono">{formatCurrency(revpar)}</div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">REVPAR</div>
             </div>
             <div>
-              <div className="text-base font-black text-white">RM 14.9K</div>
+              <div className="text-base font-black text-white font-mono">{formatCurrency(tonightRevenue)}</div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "bm" ? "MALAM INI" : "TONIGHT REV"}</div>
             </div>
             <div>
-              <div className="text-base font-black text-amber-400">4.88 ★</div>
+              <div className="text-base font-black text-amber-400">4.9 ★</div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === "bm" ? "PENILAIAN" : "AVG RATING"}</div>
             </div>
           </div>
@@ -481,16 +543,20 @@ export default function DashboardPage() {
             <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-xs">
               <DollarSign className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
-              ▲ 21.4%
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-mono">
+              {selectedMonth === "all" ? "Semua Masa" : selectedMonth}
             </span>
           </div>
           <div>
-            <div className="text-2xl font-black text-white tracking-tight">{formatCurrency(totalRevenue)}</div>
+            <div className="text-2xl font-black text-white tracking-tight font-mono">{formatCurrency(monthRevenue)}</div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
               {language === "bm" ? "JUMLAH PENDAPATAN" : "MONTHLY REVENUE"}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "berbanding RM 14,450 bulan lepas" : "vs. RM 14,450 last month"}</div>
+            <div className="text-[10px] text-slate-400 mt-1">
+              {selectedMonth === "2026-09" 
+                ? (language === "bm" ? "Bulan September 2026" : "September 2026 Total")
+                : (language === "bm" ? `Bulan ${selectedMonth}` : `Period: ${selectedMonth}`)}
+            </div>
           </div>
         </div>
 
@@ -500,16 +566,18 @@ export default function DashboardPage() {
             <div className="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-xs">
               <CalendarCheck className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
-              ▲ 8.3%
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-400 border border-indigo-800/60">
+              {confirmedCount} {language === "bm" ? "Aktif" : "Active"}
             </span>
           </div>
           <div>
-            <div className="text-2xl font-black text-white tracking-tight">{bookings.length}</div>
+            <div className="text-2xl font-black text-white tracking-tight font-mono">{monthReservationsCount}</div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
-              {language === "bm" ? "JUMLAH TEMPAHAN" : "RESERVATIONS MTD"}
+              {language === "bm" ? "JUMLAH TEMPAHAN" : "RESERVATIONS"}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">{language === "bm" ? "6 baru sejak semalam" : "6 new since yesterday"}</div>
+            <div className="text-[10px] text-slate-400 mt-1">
+              {language === "bm" ? `${monthNights} malam tempahan` : `${monthNights} nights total`}
+            </div>
           </div>
         </div>
 
@@ -746,7 +814,7 @@ export default function DashboardPage() {
 
               {/* Glowing Center Label */}
               <div className="absolute flex flex-col items-center justify-center text-center">
-                <span className="text-xl font-black text-white leading-none">{bookings.length}</span>
+                <span className="text-xl font-black text-white leading-none font-mono">{monthReservationsCount}</span>
                 <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase mt-0.5">
                   {language === "bm" ? "TEMPAHAN" : "BOOKINGS"}
                 </span>
