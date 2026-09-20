@@ -117,7 +117,7 @@ export async function getProperties(): Promise<Property[]> {
 export async function getGuests(): Promise<Guest[]> {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from("guests").select("*").order("name");
-    if (!error && data && data.length > 0) return data;
+    if (!error && data) return data;
   }
   if (typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_guests");
@@ -132,7 +132,7 @@ export async function getBookings(): Promise<Booking[]> {
       .from("bookings")
       .select("*, property:properties(*), guest:guests(*)")
       .order("check_in", { ascending: false });
-    if (!error && data && data.length > 0) return data;
+    if (!error && data) return data;
   }
   if (typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_bookings");
@@ -158,6 +158,27 @@ export async function saveBooking(booking: Omit<Booking, "id"> & { id?: string }
       delete dbPayload.id;
     }
     delete dbPayload.total_nights;
+
+    // Check if an existing booking has the same property and date range
+    if (dbPayload.property_id && dbPayload.check_in && dbPayload.check_out) {
+      const { data: existing } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("property_id", dbPayload.property_id)
+        .eq("check_in", dbPayload.check_in)
+        .eq("check_out", dbPayload.check_out)
+        .maybeSingle();
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from("bookings")
+          .update(dbPayload)
+          .eq("id", existing.id)
+          .select("*, property:properties(*), guest:guests(*)")
+          .single();
+        if (!error && data) return data;
+      }
+    }
 
     const { data, error } = await supabase.from("bookings").insert([dbPayload]).select("*, property:properties(*), guest:guests(*)").single();
     if (!error && data) return data;

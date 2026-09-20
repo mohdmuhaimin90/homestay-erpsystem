@@ -134,6 +134,11 @@ export default function BookingsPage() {
                     </td>
                     <td className="py-4 px-4">
                       <div className="font-black text-slate-900">{formatCurrency(bk.total_price)}</div>
+                      {bk.total_nights && bk.total_nights > 1 && (
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {formatCurrency(Math.round(bk.total_price / bk.total_nights))}/mlm
+                        </div>
+                      )}
                       <span className={`inline-block text-[10px] px-2 py-0.5 rounded-md font-bold mt-1 ${
                         bk.payment_status === "fully_paid"
                           ? "bg-emerald-100/70 text-emerald-800 border border-emerald-200"

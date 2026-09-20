@@ -48,13 +48,26 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  const handleResetSampleData = () => {
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetSampleData = async () => {
     if (typeof window !== "undefined") {
-      if (confirm(language === "bm" ? "Adakah anda pasti ingin mengosongkan semua tempahan dan reset kalendar?" : "Are you sure you want to clear all bookings and reset calendar?")) {
-        localStorage.setItem("homestay_bookings", "[]");
-        localStorage.setItem("homestay_guests", "[]");
-        localStorage.removeItem("homestay_properties");
-        window.location.reload();
+      const confirmMsg = language === "bm" 
+        ? "Adakah anda pasti ingin membersihkan sebarang data demo/palsu dari sistem?" 
+        : "Are you sure you want to clean up any dummy/fake sample data from the database?";
+      if (confirm(confirmMsg)) {
+        setIsResetting(true);
+        try {
+          await fetch("/api/clean-data", { method: "POST" });
+          localStorage.removeItem("homestay_properties");
+          localStorage.removeItem("homestay_bookings");
+          localStorage.removeItem("homestay_guests");
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsResetting(false);
+          window.location.reload();
+        }
       }
     }
   };
@@ -229,6 +242,7 @@ export default function CalendarPage() {
                     >
                       {booking ? (
                         <div
+                          title={`${booking.guest?.name || "Tetamu"}: ${formatDate(booking.check_in)} ➔ ${formatDate(booking.check_out)} (${booking.total_nights || 1} ${t("calendar.malam")})\nJumlah: ${formatCurrency(booking.total_price)} (${formatCurrency(Math.round(booking.total_price / (booking.total_nights || 1)))}/mlm)`}
                           className={`w-full h-full rounded-lg flex flex-col items-center justify-center text-[10px] font-black shadow-md p-1 transition-all hover:scale-105 ${
                             isMonthlyProp
                               ? "bg-amber-500 text-slate-950 shadow-amber-900/30"
@@ -291,13 +305,34 @@ export default function CalendarPage() {
                   <span className="text-slate-400">{t("calendar.guest")}:</span>
                   <span className="font-bold text-white">{selectedBooking.guest?.name} ({selectedBooking.guest?.phone})</span>
                 </div>
+                {selectedBooking.total_nights && selectedBooking.total_nights > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">{language === "bm" ? "Kadar 1 Malam" : "Rate per Night"}:</span>
+                    <span className="font-bold text-amber-300 font-mono">
+                      {formatCurrency(Math.round(selectedBooking.total_price / selectedBooking.total_nights))} / {language === "bm" ? "malam" : "night"}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-slate-400">{t("calendar.total_price")}:</span>
-                  <span className="font-black text-emerald-400">{formatCurrency(selectedBooking.total_price)}</span>
+                  <span className="text-slate-400">{language === "bm" ? "Tempoh Penginapan" : "Duration"}:</span>
+                  <span className="font-bold text-slate-200">
+                    {selectedBooking.total_nights} {language === "bm" ? "Malam" : "Nights"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 border-t border-b border-slate-800/80 my-1">
+                  <span className="text-slate-300 font-bold">{t("calendar.total_price")}:</span>
+                  <div className="text-right">
+                    <span className="font-black text-emerald-400 text-sm font-mono">{formatCurrency(selectedBooking.total_price)}</span>
+                    {selectedBooking.total_nights && selectedBooking.total_nights > 1 && (
+                      <span className="block text-[10px] text-slate-400">
+                        ({formatCurrency(Math.round(selectedBooking.total_price / selectedBooking.total_nights))} × {selectedBooking.total_nights} {language === "bm" ? "malam" : "nights"})
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">{t("calendar.deposit")}:</span>
-                  <span className="font-black text-indigo-300">{formatCurrency(selectedBooking.deposit_amount)}</span>
+                  <span className="font-black text-indigo-300 font-mono">{formatCurrency(selectedBooking.deposit_amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">{t("calendar.payment_status")}:</span>
