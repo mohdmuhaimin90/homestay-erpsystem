@@ -173,6 +173,15 @@ export async function POST(req: NextRequest) {
       // Merge consecutive day entries into reservations
       const mergedReservations = mergeConsecutiveBookings(dateMap);
 
+      // Clean up previous Booking Planner records for this property to ensure fresh, 100% accurate synchronization
+      if (isSupabaseConfigured && supabase) {
+        await supabase
+          .from("bookings")
+          .delete()
+          .eq("property_id", propId)
+          .or("notes.ilike.Booking Planner:%,notes.ilike.Tarikh Disekat%");
+      }
+
       for (const resv of mergedReservations) {
         const comment = resv.comment || "";
         const isBlockedOrMaintenance = !comment.trim();

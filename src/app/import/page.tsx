@@ -124,13 +124,23 @@ export default function ImportPage() {
     }
   };
 
-  const handleResetDummyData = () => {
+  const handleResetDummyData = async () => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("homestay_bookings", "[]");
-      localStorage.setItem("homestay_guests", "[]");
-      localStorage.removeItem("homestay_properties");
-      alert("Semua data telah dikosongkan. Kalendar kini bersih dan sedia untuk data sebenar anda.");
-      window.location.href = "/calendar";
+      const confirmMsg = language === "bm"
+        ? "Adakah anda pasti ingin membersihkan sebarang data contoh dari pangkalan data?"
+        : "Are you sure you want to clean up any sample dummy data from the database?";
+      if (confirm(confirmMsg)) {
+        try {
+          await fetch("/api/clean-data", { method: "POST" });
+        } catch (e) {
+          console.error(e);
+        }
+        localStorage.setItem("homestay_bookings", "[]");
+        localStorage.setItem("homestay_guests", "[]");
+        localStorage.removeItem("homestay_properties");
+        alert(language === "bm" ? "Pangkalan data telah dibersihkan." : "Database has been cleaned.");
+        window.location.href = "/calendar";
+      }
     }
   };
 
