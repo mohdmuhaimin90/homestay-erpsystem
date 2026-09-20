@@ -132,7 +132,12 @@ export async function getBookings(): Promise<Booking[]> {
       .from("bookings")
       .select("*, property:properties(*), guest:guests(*)")
       .order("check_in", { ascending: false });
-    if (!error && data) return data;
+    if (!error && data) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("homestay_bookings", JSON.stringify(data));
+      }
+      return data;
+    }
   }
   if (typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_bookings");
