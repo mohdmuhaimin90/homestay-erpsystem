@@ -109,10 +109,28 @@ export default function ImportPage() {
     const result = await res.json();
 
     if (result.success) {
-      setStatus(`✅ Selesai! Berjaya menyelaraskan rekod tempahan dari Januari hingga sekarang!`);
+      if (typeof window !== "undefined") {
+        if (result.bookings && Array.isArray(result.bookings)) {
+          localStorage.setItem("homestay_bookings", JSON.stringify(result.bookings));
+        }
+        if (result.guests && Array.isArray(result.guests)) {
+          localStorage.setItem("homestay_guests", JSON.stringify(result.guests));
+        }
+      }
+      setStatus(`✅ Selesai! Berjaya menyelaraskan ${result.totalReservations || 0} rekod tempahan ke dalam kalendar!`);
       setSummary(result);
     } else {
       setStatus(`Ralat: ${result.error || "Gagal memproses data."}`);
+    }
+  };
+
+  const handleResetDummyData = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("homestay_bookings", "[]");
+      localStorage.setItem("homestay_guests", "[]");
+      localStorage.removeItem("homestay_properties");
+      alert("Semua data telah dikosongkan. Kalendar kini bersih dan sedia untuk data sebenar anda.");
+      window.location.href = "/calendar";
     }
   };
 
@@ -309,12 +327,16 @@ export default function ImportPage() {
               <h2 className="text-sm font-black text-white">{t("import.paste_title", "Kotak Tampal Data (JSON)")}</h2>
               <p className="text-xs text-slate-400">{t("import.paste_desc", "Tampal teks JSON yang disalin dari Google AI Studio di sini.")}</p>
             </div>
-            <button
-              onClick={() => setJsonInput(fullYearSampleJson)}
-              className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              {t("import.use_sample", "Guna Data Sepenuh Tahun (Contoh)")}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleResetDummyData}
+                className="text-[11px] font-bold text-rose-400 hover:text-rose-300 hover:underline px-2.5 py-1 rounded-lg bg-rose-950/40 border border-rose-800/60"
+                title="Padam data contoh dan kosongkan kalendar"
+              >
+                🗑️ Reset / Kosongkan Data Contoh
+              </button>
+            </div>
           </div>
 
           <textarea

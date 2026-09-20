@@ -130,6 +130,9 @@ export async function POST(req: NextRequest) {
     let totalReservationsImported = 0;
     const homestaySummaries: Record<string, { reservations: number; nights: number }> = {};
 
+    const createdBookings: any[] = [];
+    const createdGuests: any[] = [];
+
     // 1. Process each homestay from the planner
     for (const [homestayId, dateMap] of Object.entries(data)) {
       if (!dateMap || typeof dateMap !== "object") continue;
@@ -144,21 +147,20 @@ export async function POST(req: NextRequest) {
       if (!matchedProp) {
         // Auto-create property if not found
         const cleanName = homestayId === "kemaman-1" 
-          ? "Kemaman 1" 
+          ? "Homestay Kenangan Kemaman 1" 
           : homestayId === "kemaman-2" 
-          ? "Kemaman 2" 
+          ? "Homestay Kenangan Kemaman 2" 
           : homestayId === "gong-badak" 
-          ? "Gong Badak" 
-          : homestayId.replace("-", " ").toUpperCase();
+          ? "Homestay Kenangan Gong Badak"
+          : `Homestay ${homestayId}`;
 
         matchedProp = await saveProperty({
           id: homestayId,
           name: cleanName,
-          address: homestayId.includes("kemaman") ? "Chukai, Kemaman, Terengganu" : "Kuala Terengganu",
-          base_price_per_night: 250,
-          price_direct: 250,
-          price_airbnb: 295,
-          price_bookingcom: 305,
+          address: homestayId.includes("kemaman") ? "Chukai, Kemaman, Terengganu" : "Gong Badak, Kuala Terengganu",
+          base_price_per_night: homestayId.includes("gong-badak") ? 350 : homestayId.includes("kemaman-2") ? 180 : 0,
+          cleaning_fee: 50,
+          deposit_amount: 100,
           total_rooms: 3,
           max_guests: 8,
           status: "active",
@@ -166,16 +168,15 @@ export async function POST(req: NextRequest) {
       }
 
       const propId = matchedProp.id;
+      homestaySummaries[matchedProp.name] = homestaySummaries[matchedProp.name] || { reservations: 0, nights: 0 };
 
-      // Merge contiguous dates into single multi-night bookings
+      // Merge consecutive day entries into reservations
       const mergedReservations = mergeConsecutiveBookings(dateMap);
-      homestaySummaries[matchedProp.name] = { reservations: 0, nights: 0 };
 
       for (const resv of mergedReservations) {
-        // Parse Guest Name & Phone
-        let guestName = "Tetamu Booking Planner";
-        let guestPhone = "0123456789";
         const comment = resv.comment || "";
+        let guestName = "Pelanggan Booking Planner";
+        let guestPhone = "0120000000";
 
         if (comment.includes("-")) {
           const parts = comment.split("-");
@@ -198,14 +199,15 @@ export async function POST(req: NextRequest) {
           phone: guestPhone,
           notes: `Tetamu ${matchedProp.name} (Import dari Google AI Studio Planner)`,
         });
+        createdGuests.push(guest);
 
         // 3. Determine pricing: if 0, use nights * property direct price
         const calcPrice = resv.totalPrice > 0 
           ? resv.totalPrice 
-          : (resv.nights * (matchedProp.price_direct || matchedProp.base_price_per_night || 250));
+          : (resv.nights * (matchedProp.price_direct || matchedProp.base_price_per_night || (homestayId.includes("gong-badak") ? 350 : 180)));
 
         // 4. Save Booking
-        await saveBooking({
+        const saved = await saveBooking({
           property_id: propId,
           guest_id: guest.id,
           check_in: resv.checkIn,
@@ -217,6 +219,13 @@ export async function POST(req: NextRequest) {
           booking_status: "confirmed",
           payment_status: "fully_paid",
           notes: `Booking Planner: ${comment} (${resv.nights} malam)`,
+          property: matchedProp,
+          guest: guest,
+        });
+        createdBookings.push({
+          ...saved,
+          property: matchedProp,
+          guest: guest,
         });
 
         totalReservationsImported++;
@@ -231,6 +240,8 @@ export async function POST(req: NextRequest) {
       totalReservations: totalReservationsImported,
       totalNights: totalNightsImported,
       homestaySummaries,
+      bookings: createdBookings,
+      guests: createdGuests,
       message: `Berjaya mengimport ${totalReservationsImported} tempahan (${totalNightsImported} malam) dari Januari hingga sekarang!`,
     });
   } catch (err: any) {

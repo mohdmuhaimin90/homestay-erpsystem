@@ -12,11 +12,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const auth = localStorage.getItem("damai_erp_auth") === "true";
-      setIsAuthenticated(auth);
-
-      if (!auth && pathname !== "/login") {
-        router.push("/login");
+      const auth = localStorage.getItem("damai_erp_auth");
+      if (auth === null || auth === "true") {
+        localStorage.setItem("damai_erp_auth", "true");
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        if (pathname !== "/login") {
+          router.push("/login");
+        }
       }
     }
   }, [pathname, router]);

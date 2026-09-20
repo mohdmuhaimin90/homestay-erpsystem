@@ -48,6 +48,17 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
+  const handleResetSampleData = () => {
+    if (typeof window !== "undefined") {
+      if (confirm(language === "bm" ? "Adakah anda pasti ingin mengosongkan semua tempahan dan reset kalendar?" : "Are you sure you want to clear all bookings and reset calendar?")) {
+        localStorage.setItem("homestay_bookings", "[]");
+        localStorage.setItem("homestay_guests", "[]");
+        localStorage.removeItem("homestay_properties");
+        window.location.reload();
+      }
+    }
+  };
+
   const getBookingForDay = (propertyId: string, day: number) => {
     const formattedDayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return bookings.find((b) => {
@@ -109,6 +120,15 @@ export default function CalendarPage() {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handleResetSampleData}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-[#111726] hover:bg-rose-950/50 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800/60 rounded-xl text-xs font-bold transition"
+            title="Kosongkan data contoh/demo"
+          >
+            <span>🗑️ {language === "bm" ? "Reset Data" : "Reset Data"}</span>
+          </button>
 
           <Link
             href="/import"
