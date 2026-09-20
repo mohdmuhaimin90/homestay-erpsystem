@@ -74,7 +74,7 @@ export default function DashboardPage() {
   const currentBookings = bookings.filter((b) => {
     if (b.booking_status === "cancelled") return false;
     if (isAllTime) return true;
-    return b.check_in <= monthEnd && b.check_out >= monthStart;
+    return b.check_in.startsWith(selectedMonth);
   });
 
   const monthRevenue = currentBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
@@ -96,7 +96,8 @@ export default function DashboardPage() {
     for (let day = 1; day <= daysInSelMonth; day++) {
       const dayStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
       for (const p of properties) {
-        const hasBooking = currentBookings.some((b) => {
+        const hasBooking = bookings.some((b) => {
+          if (b.booking_status === "cancelled") return false;
           const matchProp = b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase());
           return matchProp && dayStr >= b.check_in && dayStr < b.check_out;
         });
