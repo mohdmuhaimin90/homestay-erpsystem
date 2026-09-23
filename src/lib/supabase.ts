@@ -15,8 +15,31 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+// ======================================================================
+// IN-MEMORY SWR QUERY CACHE (Pencegahan Kueri Berulang & Laju Pantas)
+// ======================================================================
+const CACHE_TTL_MS = 60 * 1000; // 60 saat
+const queryCache = new Map<string, { data: any; timestamp: number }>();
+
+export function invalidateCache(keyPrefix?: string) {
+  if (keyPrefix) {
+    for (const k of queryCache.keys()) {
+      if (k.startsWith(keyPrefix)) queryCache.delete(k);
+    }
+  } else {
+    queryCache.clear();
+  }
+}
+
 // Helper data fetching with fallback to mock data / localStorage
 export async function getProperties(): Promise<Property[]> {
+  const cacheKey = "properties";
+  const cached = queryCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   let list: Property[] = [];
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from("properties").select("*").order("name");
@@ -110,43 +133,75 @@ export async function getProperties(): Promise<Property[]> {
   if (typeof window !== "undefined") {
     localStorage.setItem("homestay_properties", JSON.stringify(enriched));
   }
+  queryCache.set(cacheKey, { data: enriched, timestamp: Date.now() });
 
   return enriched;
 }
 
 export async function getGuests(): Promise<Guest[]> {
+  const cacheKey = "guests";
+  const cached = queryCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  let result: Guest[] = [];
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from("guests").select("*").order("name");
-    if (!error && data) return data;
+    if (!error && data) result = data;
   }
-  if (typeof window !== "undefined") {
+  if (result.length === 0 && typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_guests");
-    if (local) return JSON.parse(local);
+    if (local) {
+      try { result = JSON.parse(local); } catch (e) {}
+    }
   }
-  return mockGuests;
+  if (result.length === 0) {
+    result = mockGuests;
+  }
+
+  queryCache.set(cacheKey, { data: result, timestamp: now });
+  return result;
 }
 
 export async function getBookings(): Promise<Booking[]> {
+  const cacheKey = "bookings";
+  const cached = queryCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  let result: Booking[] = [];
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase
       .from("bookings")
       .select("*, property:properties(*), guest:guests(*)")
       .order("check_in", { ascending: false });
     if (!error && data) {
+      result = data;
       if (typeof window !== "undefined") {
         localStorage.setItem("homestay_bookings", JSON.stringify(data));
       }
-      return data;
     }
   }
-  if (typeof window !== "undefined") {
+  if (result.length === 0 && typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_bookings");
-    if (local) return JSON.parse(local);
+    if (local) {
+      try { result = JSON.parse(local); } catch (e) {}
+    }
   }
-  return mockBookings;
+  if (result.length === 0) {
+    result = mockBookings;
+  }
+
+  queryCache.set(cacheKey, { data: result, timestamp: now });
+  return result;
 }
 
 export async function saveBooking(booking: Omit<Booking, "id"> & { id?: string }): Promise<Booking> {
+  invalidateCache("bookings");
   const newBookingId = booking.id || "bk-" + Date.now();
   const completeBooking: Booking = {
     ...booking,
@@ -199,6 +254,7 @@ export async function saveBooking(booking: Omit<Booking, "id"> & { id?: string }
 }
 
 export async function saveProperty(property: Omit<Property, "id"> & { id?: string }): Promise<Property> {
+  invalidateCache("properties");
   const newId = property.id || "prop-" + Date.now();
   const complete: Property = { ...property, id: newId };
 
@@ -227,6 +283,7 @@ export async function saveProperty(property: Omit<Property, "id"> & { id?: strin
 }
 
 export async function saveGuest(guest: Omit<Guest, "id"> & { id?: string }): Promise<Guest> {
+  invalidateCache("guests");
   const newId = guest.id || "gst-" + Date.now();
   const complete: Guest = { ...guest, id: newId };
 

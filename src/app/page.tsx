@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   DollarSign, 
@@ -24,6 +24,7 @@ import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
 import { formatCurrency, formatDate, generateWhatsAppUrl } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
+import { MetricCardsSkeleton, TableSkeleton } from "@/components/Skeleton";
 
 export default function DashboardPage() {
   const { t, language } = useLanguage();
@@ -71,64 +72,95 @@ export default function DashboardPage() {
   const monthStart = `${selectedMonth}-01`;
   const monthEnd = `${selectedMonth}-${String(daysInSelMonth).padStart(2, "0")}`;
 
-  const currentBookings = bookings.filter((b) => {
-    if (b.booking_status === "cancelled") return false;
-    if (isAllTime) return true;
-    return b.check_in.startsWith(selectedMonth);
-  });
+  const currentBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      if (b.booking_status === "cancelled") return false;
+      if (isAllTime) return true;
+      return b.check_in.startsWith(selectedMonth);
+    });
+  }, [bookings, isAllTime, selectedMonth]);
 
-  const monthRevenue = currentBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
-  const monthReservationsCount = currentBookings.length;
-  const monthNights = currentBookings.reduce((sum, b) => sum + (b.total_nights || 1), 0);
-  const avgStay = monthReservationsCount > 0 ? (monthNights / monthReservationsCount).toFixed(1) : "0.0";
+  const { monthRevenue, monthReservationsCount, monthNights, avgStay } = useMemo(() => {
+    const rev = currentBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+    const count = currentBookings.length;
+    const nights = currentBookings.reduce((sum, b) => sum + (b.total_nights || 1), 0);
+    const avg = count > 0 ? (nights / count).toFixed(1) : "0.0";
+    return { monthRevenue: rev, monthReservationsCount: count, monthNights: nights, avgStay: avg };
+  }, [currentBookings]);
 
   // Active bookings today
-  const todayCheckIns = bookings.filter((b) => b.check_in === todayStr);
-  const todayCheckOuts = bookings.filter((b) => b.check_out === todayStr);
-  const confirmedCount = currentBookings.filter((b) => b.booking_status === "confirmed" || b.booking_status === "checked_in").length;
+  const todayCheckIns = useMemo(() => bookings.filter((b) => b.check_in === todayStr), [bookings, todayStr]);
+  const todayCheckOuts = useMemo(() => bookings.filter((b) => b.check_out === todayStr), [bookings, todayStr]);
+  const confirmedCount = useMemo(() => {
+    return currentBookings.filter((b) => b.booking_status === "confirmed" || b.booking_status === "checked_in").length;
+  }, [currentBookings]);
 
   // Real occupancy calculation for selected month
-  const totalUnits = properties.length || 3;
-  const totalAvailableNights = isAllTime ? (totalUnits * 365) : (totalUnits * daysInSelMonth);
+  const { totalUnits, totalAvailableNights, occupiedRoomNights, occupancyRate, adr, revpar } = useMemo(() => {
+    const units = properties.length || 3;
+    const availNights = isAllTime ? (units * 365) : (units * daysInSelMonth);
 
-  let occupiedRoomNights = 0;
-  if (!isAllTime) {
-    for (let day = 1; day <= daysInSelMonth; day++) {
-      const dayStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
-      for (const p of properties) {
-        const hasBooking = bookings.some((b) => {
-          if (b.booking_status === "cancelled") return false;
-          const matchProp = b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase());
-          return matchProp && dayStr >= b.check_in && dayStr < b.check_out;
-        });
-        if (hasBooking) occupiedRoomNights++;
+    let occNights = 0;
+    if (!isAllTime) {
+      for (let day = 1; day <= daysInSelMonth; day++) {
+        const dayStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
+        for (const p of properties) {
+          const hasBooking = bookings.some((b) => {
+            if (b.booking_status === "cancelled") return false;
+            const matchProp = b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase());
+            return matchProp && dayStr >= b.check_in && dayStr < b.check_out;
+          });
+          if (hasBooking) occNights++;
+        }
       }
+    } else {
+      occNights = monthNights;
     }
-  } else {
-    occupiedRoomNights = monthNights;
-  }
 
-  const occupancyRate = totalAvailableNights > 0 
-    ? Math.min(100, Math.round((occupiedRoomNights / totalAvailableNights) * 100))
-    : 0;
+    const rate = availNights > 0 
+      ? Math.min(100, Math.round((occNights / availNights) * 100))
+      : 0;
 
-  const adr = occupiedRoomNights > 0 ? Math.round(monthRevenue / occupiedRoomNights) : 0;
-  const revpar = totalAvailableNights > 0 ? Math.round(monthRevenue / totalAvailableNights) : 0;
+    const calculatedAdr = occNights > 0 ? Math.round(monthRevenue / occNights) : 0;
+    const calculatedRevpar = availNights > 0 ? Math.round(monthRevenue / availNights) : 0;
 
-  const tonightRevenue = bookings
-    .filter((b) => b.booking_status !== "cancelled" && todayStr >= b.check_in && todayStr < b.check_out)
-    .reduce((sum, b) => sum + Math.round((b.total_price || 0) / (b.total_nights || 1)), 0);
+    return {
+      totalUnits: units,
+      totalAvailableNights: availNights,
+      occupiedRoomNights: occNights,
+      occupancyRate: rate,
+      adr: calculatedAdr,
+      revpar: calculatedRevpar
+    };
+  }, [properties, isAllTime, daysInSelMonth, selectedMonth, bookings, monthNights, monthRevenue]);
+
+  const tonightRevenue = useMemo(() => {
+    return bookings
+      .filter((b) => b.booking_status !== "cancelled" && todayStr >= b.check_in && todayStr < b.check_out)
+      .reduce((sum, b) => sum + Math.round((b.total_price || 0) / (b.total_nights || 1)), 0);
+  }, [bookings, todayStr]);
 
   // Channel Breakdown for active period
-  const activeForChannels = currentBookings.length > 0 ? currentBookings : bookings;
-  const directCount = activeForChannels.filter((b) => b.source === "direct_whatsapp" || (b.source as string) === "direct").length;
-  const airbnbCount = activeForChannels.filter((b) => b.source === "airbnb").length;
-  const bookingComCount = activeForChannels.filter((b) => b.source === "booking_com" || b.source === "agoda" || b.source === "other").length;
-  const totalChannels = directCount + airbnbCount + bookingComCount || 1;
+  const { pDirect, pAirbnb, pBooking, directCount, airbnbCount, bookingComCount } = useMemo(() => {
+    const activeForChannels = currentBookings.length > 0 ? currentBookings : bookings;
+    const direct = activeForChannels.filter((b) => b.source === "direct_whatsapp" || (b.source as string) === "direct").length;
+    const airbnb = activeForChannels.filter((b) => b.source === "airbnb").length;
+    const bookingCom = activeForChannels.filter((b) => b.source === "booking_com" || b.source === "agoda" || b.source === "other").length;
+    const total = direct + airbnb + bookingCom || 1;
 
-  const pDirect = Math.round((directCount / totalChannels) * 100);
-  const pAirbnb = Math.round((airbnbCount / totalChannels) * 100);
-  const pBooking = Math.max(0, 100 - pDirect - pAirbnb);
+    const directPct = Math.round((direct / total) * 100);
+    const airbnbPct = Math.round((airbnb / total) * 100);
+    const bookingPct = Math.max(0, 100 - directPct - airbnbPct);
+
+    return {
+      pDirect: directPct,
+      pAirbnb: airbnbPct,
+      pBooking: bookingPct,
+      directCount: direct,
+      airbnbCount: airbnb,
+      bookingComCount: bookingCom
+    };
+  }, [currentBookings, bookings]);
 
   const getCheckInWhatsAppMessage = (b: Booking) => {
     const propName = b.property?.name || "Homestay Kenangan";
@@ -151,6 +183,15 @@ export default function DashboardPage() {
     }
     return `Salam sejahtera ${guestName},\n\nTerima kasih kerana memilih ${propName} untuk percutian anda sekeluarga! ❤️\n\nKami berharap anda berpuas hati sepanjang penginapan. Sekiranya kunci sudah diletakkan di tempat asal dan suis elektrik dipadamkan, deposit keselamatan anda sebanyak RM ${b.deposit_amount || 100} akan dipulangkan sebentar lagi.\n\nJumpa lagi di lain masa!`;
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-16 max-w-7xl mx-auto">
+        <MetricCardsSkeleton count={4} />
+        <TableSkeleton rows={6} cols={4} />
+      </div>
+    );
+  }
 
   if (uiMode === "Basic") {
     return (

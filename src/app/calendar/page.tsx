@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   ChevronLeft, 
@@ -20,19 +20,23 @@ import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
 import { formatCurrency, formatDate, generateWhatsAppUrl } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
+import { CalendarSkeleton } from "@/components/Skeleton";
 
 export default function CalendarPage() {
   const { t, language } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       const [p, b] = await Promise.all([getProperties(), getBookings()]);
       setProperties(p);
       setBookings(b);
+      setLoading(false);
     }
     load();
   }, []);
@@ -72,24 +76,42 @@ export default function CalendarPage() {
     }
   };
 
-  const getBookingForDay = (propertyId: string, day: number) => {
-    const formattedDayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return bookings.find((b) => {
-      if (b.booking_status === "cancelled") return false;
-      const prop = properties.find((p) => p.id === propertyId);
-      const isPropMatch = 
-        b.property_id === propertyId ||
-        (prop && (
-          (b.property?.name && prop.name.toLowerCase() === b.property.name.toLowerCase()) ||
-          (prop.name.toLowerCase().includes("kemaman 1") && (b.property_id === "kemaman-1" || b.property?.name?.toLowerCase().includes("kemaman 1"))) ||
-          (prop.name.toLowerCase().includes("kemaman 2") && (b.property_id === "kemaman-2" || b.property?.name?.toLowerCase().includes("kemaman 2"))) ||
-          (prop.name.toLowerCase().includes("gong badak") && (b.property_id === "gong-badak" || b.property?.name?.toLowerCase().includes("gong badak")))
-        ));
+  // Pre-index booking positions for O(1) day cell rendering
+  const bookingDayMap = useMemo(() => {
+    const map = new Map<string, Booking>();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const formattedDayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      for (const prop of properties) {
+        const key = `${prop.id}_${day}`;
+        const found = bookings.find((b) => {
+          if (b.booking_status === "cancelled") return false;
+          const isPropMatch = 
+            b.property_id === prop.id ||
+            (b.property?.name && prop.name.toLowerCase() === b.property.name.toLowerCase()) ||
+            (prop.name.toLowerCase().includes("kemaman 1") && (b.property_id === "kemaman-1" || b.property?.name?.toLowerCase().includes("kemaman 1"))) ||
+            (prop.name.toLowerCase().includes("kemaman 2") && (b.property_id === "kemaman-2" || b.property?.name?.toLowerCase().includes("kemaman 2"))) ||
+            (prop.name.toLowerCase().includes("gong badak") && (b.property_id === "gong-badak" || b.property?.name?.toLowerCase().includes("gong badak")));
+          return isPropMatch && formattedDayStr >= b.check_in && formattedDayStr < b.check_out;
+        });
+        if (found) {
+          map.set(key, found);
+        }
+      }
+    }
+    return map;
+  }, [bookings, properties, year, month, daysInMonth]);
 
-      if (!isPropMatch) return false;
-      return formattedDayStr >= b.check_in && formattedDayStr < b.check_out;
-    });
+  const getBookingForDay = (propertyId: string, day: number) => {
+    return bookingDayMap.get(`${propertyId}_${day}`);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-16">
+        <CalendarSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-16">

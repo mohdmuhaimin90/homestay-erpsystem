@@ -75,8 +75,23 @@ CREATE TABLE IF NOT EXISTS expenses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Index pantas untuk carian tarikh
+-- ======================================================================
+-- INDEKS PANTAS PANGKALAN DATA (DATABASE INDEXES FOR HIGH PERFORMANCE)
+-- ======================================================================
+-- 1. Index komposit carian tarikh & unit bagi kalendar & dashboard
 CREATE INDEX IF NOT EXISTS idx_bookings_property_dates ON bookings (property_id, check_in, check_out);
+CREATE INDEX IF NOT EXISTS idx_bookings_checkin_checkout ON bookings (check_in, check_out);
+CREATE INDEX IF NOT EXISTS idx_bookings_checkin ON bookings (check_in);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (booking_status);
+CREATE INDEX IF NOT EXISTS idx_bookings_guest_id ON bookings (guest_id);
+
+-- 2. Index carian direktori tetamu (nama & telefon)
+CREATE INDEX IF NOT EXISTS idx_guests_phone ON guests (phone);
+CREATE INDEX IF NOT EXISTS idx_guests_name ON guests (name);
+
+-- 3. Index pembayaran & perbelanjaan
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments (booking_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_property_date ON expenses (property_id, expense_date);
 
 -- Sample Data Awalan (Boleh dipadam jika tidak mahu)
 INSERT INTO properties (name, address, base_price_per_night, cleaning_fee, deposit_amount, total_rooms, max_guests, smartlock_code, wifi_ssid, wifi_password)
