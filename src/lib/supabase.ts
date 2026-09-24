@@ -42,9 +42,13 @@ export async function getProperties(): Promise<Property[]> {
 
   let list: Property[] = [];
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from("properties").select("*").order("name");
-    if (!error && data && data.length > 0) {
-      list = data;
+    try {
+      const { data, error } = await supabase.from("properties").select("*").order("name");
+      if (!error && data && data.length > 0) {
+        list = data;
+      }
+    } catch (e) {
+      console.warn("Supabase properties query error:", e);
     }
   }
   if (list.length === 0 && typeof window !== "undefined") {
@@ -148,17 +152,29 @@ export async function getGuests(): Promise<Guest[]> {
 
   let result: Guest[] = [];
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from("guests").select("*").order("name");
-    if (!error && data) result = data;
+    try {
+      const { data, error } = await supabase.from("guests").select("*").order("name");
+      if (!error && data && data.length > 0) result = data;
+    } catch (e) {
+      console.warn("Supabase guests query error:", e);
+    }
   }
   if (result.length === 0 && typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_guests");
     if (local) {
-      try { result = JSON.parse(local); } catch (e) {}
+      try {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          result = parsed;
+        }
+      } catch (e) {}
     }
   }
   if (result.length === 0) {
     result = mockGuests;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("homestay_guests", JSON.stringify(mockGuests));
+    }
   }
 
   queryCache.set(cacheKey, { data: result, timestamp: now });
@@ -175,25 +191,37 @@ export async function getBookings(): Promise<Booking[]> {
 
   let result: Booking[] = [];
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("*, property:properties(*), guest:guests(*)")
-      .order("check_in", { ascending: false });
-    if (!error && data) {
-      result = data;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("homestay_bookings", JSON.stringify(data));
+    try {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*, property:properties(*), guest:guests(*)")
+        .order("check_in", { ascending: false });
+      if (!error && data && data.length > 0) {
+        result = data;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("homestay_bookings", JSON.stringify(data));
+        }
       }
+    } catch (e) {
+      console.warn("Supabase bookings query error:", e);
     }
   }
   if (result.length === 0 && typeof window !== "undefined") {
     const local = localStorage.getItem("homestay_bookings");
     if (local) {
-      try { result = JSON.parse(local); } catch (e) {}
+      try {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          result = parsed;
+        }
+      } catch (e) {}
     }
   }
   if (result.length === 0) {
     result = mockBookings;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("homestay_bookings", JSON.stringify(mockBookings));
+    }
   }
 
   queryCache.set(cacheKey, { data: result, timestamp: now });

@@ -93,13 +93,17 @@ CREATE INDEX IF NOT EXISTS idx_guests_name ON guests (name);
 CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments (booking_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_property_date ON expenses (property_id, expense_date);
 
--- Sample Data Awalan (Boleh dipadam jika tidak mahu)
-INSERT INTO properties (name, address, base_price_per_night, cleaning_fee, deposit_amount, total_rooms, max_guests, smartlock_code, wifi_ssid, wifi_password)
+-- Data Awalan Homestay Kenangan
+INSERT INTO properties (id, name, address, base_price_per_night, price_direct, price_airbnb, price_bookingcom, cleaning_fee, deposit_amount, total_rooms, max_guests, smartlock_code, wifi_ssid, wifi_password, google_maps_url, status)
 VALUES 
-('Villa A - Poolside Garden', 'No. 12, Jalan Damai 3, 43000 Kajang, Selangor', 280.00, 50.00, 100.00, 3, 8, '8899#', 'VillaDamai_5G', 'damai2026!'),
-('Chalet B - Romantic Suite', 'No. 14, Jalan Damai 3, 43000 Kajang, Selangor', 180.00, 30.00, 50.00, 1, 3, '4422#', 'ChaletSuite_WiFi', 'suiteguest123'),
-('Homestay C - Family Classic', 'No. 16, Jalan Damai 3, 43000 Kajang, Selangor', 350.00, 60.00, 150.00, 4, 12, '1234#', 'FamilyClassic_Guest', 'keluargabahagia')
-ON CONFLICT DO NOTHING;
+('107a4fd3-004b-47e6-9836-4ec6c9fdbc34', 'Homestay Kenangan Kemaman 1', 'Chukai, Kemaman, Terengganu (Rumah Belakang)', 0.00, 0.00, 0.00, 0.00, 0.00, 700.00, 2, 4, '8899#', 'HomestayKenangan_Kemaman', 'kenangan2026!', 'https://maps.app.goo.gl/KyBmg1iwgqLiSsha9', 'active'),
+('107a4fd3-004b-47e6-9836-4ec6c9fdbc35', 'Homestay Kenangan Kemaman 2', 'Chukai, Kemaman, Terengganu (Rumah Depan)', 180.00, 180.00, 215.00, 225.00, 40.00, 100.00, 3, 8, '4422#', 'HomestayKenangan_Kemaman', 'kenangan2026!', 'https://maps.app.goo.gl/KyBmg1iwgqLiSsha9', 'active'),
+('74b22955-e2e7-4a84-b18c-074b73ab1825', 'Homestay Kenangan Gong Badak', 'Gong Badak, Kuala Terengganu, Terengganu', 350.00, 350.00, 395.00, 410.00, 60.00, 150.00, 4, 12, '1234#', 'HomestayKenangan_KT', 'kenangan2026!', 'https://maps.app.goo.gl/SCBDByiRjyYQefny6', 'active')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  address = EXCLUDED.address,
+  base_price_per_night = EXCLUDED.base_price_per_night;
+
 -- Tambahan lajur untuk iCal 2-Way Sync & Kadar Saluran (Airbnb & Booking.com)
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS airbnb_ical_url TEXT;
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS bookingcom_ical_url TEXT;
@@ -107,4 +111,33 @@ ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_direct NUMERIC(10,2);
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_airbnb NUMERIC(10,2);
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_bookingcom NUMERIC(10,2);
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS ical_uid TEXT;
+
+-- ======================================================================
+-- POLISI ROW LEVEL SECURITY (RLS) UNTUK APLIKASI ERP HOMESTAY
+-- Memastikan kunci API anon/service dapat membaca & menulis rekod dengan lancar
+-- ======================================================================
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Allow public all for properties" ON properties;
+    CREATE POLICY "Allow public all for properties" ON properties FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Allow public all for guests" ON guests;
+    CREATE POLICY "Allow public all for guests" ON guests FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Allow public all for bookings" ON bookings;
+    CREATE POLICY "Allow public all for bookings" ON bookings FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Allow public all for payments" ON payments;
+    CREATE POLICY "Allow public all for payments" ON payments FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Allow public all for expenses" ON expenses;
+    CREATE POLICY "Allow public all for expenses" ON expenses FOR ALL USING (true) WITH CHECK (true);
+END $$;
+
 
