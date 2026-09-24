@@ -25,8 +25,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
-  // Login page gets full standalone viewport without sidebar/header
-  if (pathname === "/login") {
+  // Standalone pages (Login & Mod Parents Planner)
+  if (pathname === "/login" || pathname.startsWith("/planner")) {
     return <>{children}</>;
   }
 
