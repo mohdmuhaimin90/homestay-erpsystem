@@ -12,22 +12,9 @@ export default function PlannerHeader() {
   return (
     <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-lg border-b border-slate-800">
       <div className="max-w-xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-        <Link href="/planner" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-base font-black tracking-tight uppercase leading-tight">
-              Homestay Planner
-            </div>
-            <div className="text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-              <span>Mod Parents</span>
-              <span>•</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
-                <ShieldCheck className="w-2.5 h-2.5" /> 1 Database Bersatu
-              </span>
-            </div>
-          </div>
+        <Link href="/planner" className="flex flex-col">
+          <span className="text-xl font-black tracking-tight uppercase">Homestay Planner</span>
+          <span className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">Availability Tracker</span>
         </Link>
 
         <div className="flex items-center gap-2">
@@ -43,11 +30,11 @@ export default function PlannerHeader() {
 
           <Link
             href="/"
-            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5"
-            title="Tukar ke Mod Pengurusan ERP Penuh"
+            className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
+            title="Masuk ke Sistem ERP Homestay Kenangan"
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Mod ERP</span>
+            <span>Masuk Sistem ERP</span>
           </Link>
         </div>
       </div>

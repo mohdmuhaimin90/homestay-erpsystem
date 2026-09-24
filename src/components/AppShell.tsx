@@ -10,6 +10,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const auth = localStorage.getItem("damai_erp_auth");
@@ -24,6 +26,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
     }
   }, [pathname, router]);
+
+  // Auto close mobile drawer on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   // Standalone pages (Login & Mod Parents Planner)
   if (pathname === "/login" || pathname.startsWith("/planner")) {
@@ -52,11 +59,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <div className="flex min-h-screen bg-[#080B11] text-slate-100 overflow-x-hidden relative">
+      {/* Desktop Sidebar (Permanent on md: and above) */}
+      <div className="hidden md:flex md:w-64 md:shrink-0 md:min-h-screen md:sticky md:top-0 md:h-screen">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Drawer (Slide-over drawer with backdrop overlay) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Panel */}
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#0B0F19] border-r border-slate-800 shadow-2xl z-50 flex flex-col transition-transform duration-300">
+            <Sidebar isMobile onClose={() => setIsMobileMenuOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#080B11]">
-        <Header />
-        <main className="flex-1 p-6 md:p-8 max-w-[1600px] w-full mx-auto">
+        <Header onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)} />
+        <main className="flex-1 p-3.5 sm:p-5 md:p-8 max-w-[1600px] w-full mx-auto min-w-0">
           {children}
         </main>
       </div>
