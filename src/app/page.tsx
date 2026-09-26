@@ -18,7 +18,11 @@ import {
   ArrowUpRight,
   MoreVertical,
   Heart,
-  PlusCircle
+  PlusCircle,
+  Key,
+  Wifi,
+  Building2,
+  BarChart3
 } from "lucide-react";
 import { getBookings, getProperties } from "@/lib/supabase";
 import { Booking, Property } from "@/lib/types";
@@ -162,6 +166,59 @@ export default function DashboardPage() {
     };
   }, [currentBookings, bookings]);
 
+  // Property-by-property breakdown for active period & today's status
+  const propertyStats = useMemo(() => {
+    return properties.map((p) => {
+      const lowerName = (p.name || "").toLowerCase();
+      const isMonthly = p.rental_type === "monthly" || p.id === "kemaman-1" || lowerName.includes("kemaman 1");
+
+      const propBookings = currentBookings.filter((b) => {
+        if (b.booking_status === "cancelled") return false;
+        return b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase());
+      });
+
+      const count = propBookings.length;
+      const bookedNights = propBookings.reduce((sum, b) => sum + (b.total_nights || 1), 0);
+      let revenue = propBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+
+      // If monthly rental and revenue from bookings is 0, default to monthly rental rate
+      if (isMonthly && revenue === 0) {
+        revenue = p.monthly_rental_rate || 700;
+      }
+
+      const totalAvail = isAllTime ? 365 : daysInSelMonth;
+      const occPct = totalAvail > 0 
+        ? Math.min(100, Math.round((bookedNights / totalAvail) * 100))
+        : 0;
+
+      const activeToday = bookings.find(
+        (b) =>
+          (b.property_id === p.id || (b.property?.name && p.name.toLowerCase() === b.property.name.toLowerCase())) &&
+          b.check_in <= todayStr &&
+          b.check_out > todayStr &&
+          b.booking_status !== "cancelled"
+      );
+
+      return {
+        property: p,
+        isMonthly,
+        bookingsCount: count,
+        bookedNights,
+        revenue,
+        occupancyRate: isMonthly ? 100 : occPct,
+        activeToday,
+      };
+    });
+  }, [properties, currentBookings, isAllTime, daysInSelMonth, bookings, todayStr]);
+
+  const totalAllIncome = useMemo(() => {
+    return propertyStats.reduce((sum, p) => sum + p.revenue, 0);
+  }, [propertyStats]);
+
+  const totalBookedDays = useMemo(() => {
+    return propertyStats.reduce((sum, p) => sum + (p.isMonthly ? (isAllTime ? 365 : daysInSelMonth) : p.bookedNights), 0);
+  }, [propertyStats, isAllTime, daysInSelMonth]);
+
   const getCheckInWhatsAppMessage = (b: Booking) => {
     const propName = b.property?.name || "Homestay Kenangan";
     const guestName = b.guest?.name || (language === "bm" ? "Tuan/Puan" : "Guest");
@@ -195,259 +252,408 @@ export default function DashboardPage() {
 
   if (uiMode === "Basic") {
     return (
-      <div className="space-y-8 pb-16 max-w-5xl mx-auto">
-        {/* Warm Welcome Banner */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#141A29] via-[#0E1524] to-[#121826] border border-amber-500/30 shadow-2xl relative overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="space-y-6 sm:space-y-8 pb-16 max-w-5xl mx-auto">
+        {/* 1. Header & Month Selector */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-[#141A29] via-[#0E1524] to-[#121826] border border-amber-500/30 shadow-2xl relative overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider uppercase border border-amber-500/40 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-wider uppercase border border-amber-500/40 mb-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>BASIC</span>
+                <span>BASIC · RINGKAS & PADAT</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                {language === "bm" ? "Selamat Datang ke Homestay Kenangan 🏡" : "Welcome to Homestay Kenangan 🏡"}
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {language === "bm" ? "Ringkasan Prestasi Homestay 🏡" : "Homestay Summary Dashboard 🏡"}
               </h1>
-              <p className="text-base text-slate-300 mt-2 max-w-xl font-medium">
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl font-medium">
                 {language === "bm" 
-                  ? "Pusat kawalan homestay yang pantas dan mudah. Kemaman 1 & 2 (Terengganu) dan Gong Badak (Kuala Terengganu)."
-                  : "Fast and intuitive property command center for Kemaman 1 & 2 and Gong Badak."}
+                  ? "Paparan ringkas 4 perkara penting: Total pendapatan, perbandingan antara 3 homestay, sumber tempahan, dan jumlah hari tempahan."
+                  : "Concise view of 4 key essentials: Total revenue, 3-property income comparison, booking sources, and total booked days."}
               </p>
             </div>
 
-            <Link
-              href="/bookings/new"
-              className="px-6 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-base shadow-xl shadow-amber-500/20 transition-all hover:scale-105 flex items-center gap-3 shrink-0"
-            >
-              <PlusCircle className="w-6 h-6" />
-              <span>{t("dashboard.btn_register_guest")}</span>
-            </Link>
+            {/* Quick Action & Month Switcher */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              <div className="relative">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="appearance-none flex items-center gap-2 pl-9 pr-9 py-2.5 rounded-2xl bg-[#090D16] border border-amber-500/40 text-xs font-black text-amber-300 hover:border-amber-400 focus:outline-hidden focus:border-amber-400 cursor-pointer shadow-lg transition"
+                >
+                  <option value="2026-09">{language === "bm" ? "📅 September 2026" : "📅 September 2026"}</option>
+                  <option value="2026-08">{language === "bm" ? "📅 Ogos 2026" : "📅 August 2026"}</option>
+                  <option value="2026-10">{language === "bm" ? "📅 Oktober 2026" : "📅 October 2026"}</option>
+                  <option value="2026-07">{language === "bm" ? "📅 Julai 2026" : "📅 July 2026"}</option>
+                  <option value="2026-06">{language === "bm" ? "📅 Jun 2026" : "📅 June 2026"}</option>
+                  <option value="2026-05">{language === "bm" ? "📅 Mei 2026" : "📅 May 2026"}</option>
+                  <option value="all">{language === "bm" ? "📅 Semua Rekod (All Time)" : "📅 All Records (All Time)"}</option>
+                </select>
+                <CalendarIcon className="w-4 h-4 text-amber-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              <Link
+                href="/bookings/new"
+                className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 transition-all hover:scale-105 flex items-center gap-2 shrink-0"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>{t("dashboard.btn_register_guest")}</span>
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* 2 Big Action Sections: Check-In & Check-Out Today */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Box 1: Tetamu Masuk Hari Ini */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-emerald-500/30 shadow-xl space-y-4">
+        {/* 2. Dua Metrik Utama: Total Income (All Properties) & Total Hari Tempahan Semua Property */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Card 1: Total Income All Properties */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-emerald-500/40 shadow-xl relative overflow-hidden flex flex-col justify-between space-y-4">
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-xl shadow-lg">
-                  🛎️
+                <div className="w-12 h-12 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-xl shadow-lg">
+                  <DollarSign className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-white">{t("dashboard.checkin_today")}</h2>
-                  <p className="text-xs text-slate-400">{language === "bm" ? "Tarikh:" : "Date:"} {formatDate(todayStr)}</p>
+                  <div className="text-xs font-black tracking-wider uppercase text-emerald-400">
+                    {language === "bm" ? "TOTAL INCOME ALL PROPERTIES" : "TOTAL INCOME (ALL PROPERTIES)"}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {language === "bm" ? "Jumlah Pendapatan Semua Homestay" : "Combined Income Across All Homestays"}
+                  </div>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 font-black text-sm border border-emerald-800/60">
-                {todayCheckIns.length} {language === "bm" ? "Tetamu" : "Guests"}
+              <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 font-mono">
+                {selectedMonth === "all" ? (language === "bm" ? "Semua Masa" : "All Time") : selectedMonth}
               </span>
             </div>
 
-            {todayCheckIns.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
-                <p className="text-sm font-bold text-slate-300">{t("dashboard.checkin_none")}</p>
-                <p className="text-xs text-slate-400">{t("dashboard.checkin_none_sub")}</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {todayCheckIns.map((b) => (
-                  <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-lg font-black text-white">{b.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
-                        <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-mono">
-                          <Phone className="w-3.5 h-3.5" /> {b.guest?.phone || "-"}
-                        </div>
-                      </div>
-                      <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800">
-                        {formatCurrency(b.total_price)}
-                      </span>
-                    </div>
-
-                    {b.guest?.phone && (
-                      <a
-                        href={generateWhatsAppUrl(b.guest.phone, getCheckInWhatsAppMessage(b))}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02]"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        <span>{language === "bm" ? "Hantar Kod Pintu & Alamat ke WhatsApp" : "Send Door PIN & Address via WhatsApp"}</span>
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Box 2: Tetamu Keluar Hari Ini */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-rose-500/30 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xl shadow-lg">
-                  🚪
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-white">{t("dashboard.checkout_today")}</h2>
-                  <p className="text-xs text-slate-400">{language === "bm" ? "Check-out sebelum 12:00 tengah hari" : "Check-out before 12:00 PM"}</p>
-                </div>
-              </div>
-              <span className="px-3 py-1 rounded-xl bg-rose-950 text-rose-400 font-black text-sm border border-rose-800/60">
-                {todayCheckOuts.length} {language === "bm" ? "Tetamu" : "Guests"}
-              </span>
-            </div>
-
-            {todayCheckOuts.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 text-center space-y-2">
-                <p className="text-sm font-bold text-slate-300">{t("dashboard.checkout_none")}</p>
-                <p className="text-xs text-slate-400">{language === "bm" ? "Tiada keperluan untuk pembersihan bilik serta-merta hari ini." : "No immediate room turnover required today."}</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {todayCheckOuts.map((b) => (
-                  <div key={b.id} className="p-4 rounded-2xl bg-[#111726] border border-slate-800 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-lg font-black text-white">{b.guest?.name || (language === "bm" ? "Tetamu" : "Guest")}</div>
-                        <div className="text-xs font-bold text-indigo-400 mt-0.5">{b.property?.name}</div>
-                        <div className="text-xs text-slate-400 mt-1">{language === "bm" ? "Deposit Perlu Pulang:" : "Refund Deposit:"} RM {b.deposit_amount || 100}</div>
-                      </div>
-                      <span className="text-xs font-black text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-800">
-                        Check-out
-                      </span>
-                    </div>
-
-                    {b.guest?.phone && (
-                      <a
-                        href={generateWhatsAppUrl(b.guest.phone, getCheckOutWhatsAppMessage(b))}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-sm flex items-center justify-center gap-2 border border-slate-700 transition"
-                      >
-                        <MessageCircle className="w-5 h-5 text-emerald-400" />
-                        <span>{language === "bm" ? "Hantar WhatsApp Terima Kasih & Deposit" : "Send WhatsApp Thank You & Deposit"}</span>
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section 3: Status Bilik Hari Ini (Kosong atau Ada Orang) */}
-        <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-5">
-          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                <span>🛌 {t("dashboard.room_status_today")}</span>
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight font-mono">
+                {formatCurrency(totalAllIncome)}
+              </div>
+              <p className="text-xs text-slate-300 mt-2 font-medium">
+                {language === "bm" 
+                  ? "Jumlah kutipan terkumpul bagi ketiga-tiga unit (Kemaman 1, Kemaman 2, dan Gong Badak)."
+                  : "Total cumulative revenue for all 3 units (Kemaman 1, Kemaman 2, and Gong Badak)."}
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+              <span>{language === "bm" ? "Purata setiap hartanah:" : "Average per property:"}</span>
+              <span className="text-emerald-400 font-bold font-mono">
+                {formatCurrency(Math.round(totalAllIncome / (properties.length || 3)))}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Total Berapa Hari Tempahan Semua Property */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border-2 border-cyan-500/40 shadow-xl relative overflow-hidden flex flex-col justify-between space-y-4">
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-950/90 border border-cyan-500/40 text-cyan-400 flex items-center justify-center text-xl shadow-lg">
+                  <CalendarCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-xs font-black tracking-wider uppercase text-cyan-400">
+                    {language === "bm" ? "TOTAL HARI TEMPAHAN" : "TOTAL BOOKED DAYS"}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {language === "bm" ? "Semua Property Terkumpul" : "Across All Properties"}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-800/80 font-mono">
+                {monthReservationsCount} {language === "bm" ? "Tempahan" : "Bookings"}
+              </span>
+            </div>
+
+            <div>
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                {monthNights} <span className="text-lg font-bold text-slate-400">{language === "bm" ? "Hari / Malam" : "Days / Nights"}</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-2 font-medium">
+                {language === "bm" 
+                  ? "Jumlah keseluruhan malam dan hari yang ditempah tetamu merentas ketiga-tiga unit."
+                  : "Total number of nights and days booked by guests across all 3 units."}
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+              <span>{language === "bm" ? "Purata tempoh sewaan:" : "Average stay duration:"}</span>
+              <span className="text-cyan-400 font-bold font-mono">
+                {avgStay} {language === "bm" ? "malam/tempahan" : "nights/booking"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Income Comparison Antara 3 Property */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
+                {language === "bm" ? "PERBANDINGAN PENDAPATAN" : "INCOME COMPARISON"}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">
+                <Building2 className="w-5 h-5 text-amber-400" />
+                <span>{language === "bm" ? "Income Comparison Antara 3 Property" : "Income Comparison Across 3 Properties"}</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {t("dashboard.room_status_sub")}
+                {language === "bm" 
+                  ? "Perbandingan hasil jualan dan bahagian sumbangan bagi Homestay Kemaman 1, Kemaman 2, dan Gong Badak."
+                  : "Comparison of revenue and percentage contribution for Kemaman 1, Kemaman 2, and Gong Badak."}
               </p>
             </div>
-            <Link
-              href="/calendar"
-              className="text-xs font-bold text-indigo-400 hover:underline flex items-center gap-1"
-            >
-              <span>{t("dashboard.open_full_calendar")}</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
+
+            <div className="text-right self-start sm:self-auto">
+              <span className="text-xs font-bold text-slate-400 block">{language === "bm" ? "Jumlah Keseluruhan" : "Total Combined"}</span>
+              <span className="text-lg font-black text-emerald-400 font-mono">{formatCurrency(totalAllIncome)}</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {properties.map((p) => {
-              const lowerName = (p.name || "").toLowerCase();
-              const isMonthly = p.rental_type === "monthly" || p.id === "kemaman-1" || lowerName.includes("kemaman 1");
-              const activeBooking = bookings.find(
-                (b) =>
-                  b.property_id === p.id &&
-                  b.check_in <= todayStr &&
-                  b.check_out > todayStr &&
-                  b.booking_status !== "cancelled"
-              );
+          {/* Combined Visual Contribution Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs text-slate-400 font-bold">
+              <span>{language === "bm" ? "Nisbah Sumbangan Pendapatan:" : "Income Contribution Ratio:"}</span>
+              <span>100%</span>
+            </div>
+            <div className="h-4 w-full bg-slate-900 rounded-full overflow-hidden flex p-1 gap-1 border border-slate-800">
+              {propertyStats.map((item, idx) => {
+                const sharePct = totalAllIncome > 0 ? (item.revenue / totalAllIncome) * 100 : 33.3;
+                const colorClass = idx === 0 ? "bg-amber-400" : idx === 1 ? "bg-sky-400" : "bg-indigo-500";
+                return (
+                  <div
+                    key={item.property.id}
+                    style={{ width: `${Math.max(4, sharePct)}%` }}
+                    className={`h-full rounded-full ${colorClass} transition-all duration-500`}
+                    title={`${item.property.name}: ${formatCurrency(item.revenue)} (${Math.round(sharePct)}%)`}
+                  />
+                );
+              })}
+            </div>
+            
+            {/* Small Legend Under Bar */}
+            <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-slate-400 pt-1">
+              {propertyStats.map((item, idx) => {
+                const colorDot = idx === 0 ? "bg-amber-400" : idx === 1 ? "bg-sky-400" : "bg-indigo-500";
+                const sharePct = totalAllIncome > 0 ? Math.round((item.revenue / totalAllIncome) * 100) : 0;
+                return (
+                  <span key={item.property.id} className="flex items-center gap-1.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${colorDot}`} />
+                    <span className="text-slate-200">{item.property.name.replace("Homestay Kenangan ", "")}</span>
+                    <span className="font-mono text-slate-400">({sharePct}%)</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3 Individual Property Comparison Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            {propertyStats.map((item, idx) => {
+              const sharePct = totalAllIncome > 0 ? Math.round((item.revenue / totalAllIncome) * 100) : 0;
+              const borderAccent = idx === 0 
+                ? "border-amber-500/40 hover:border-amber-400" 
+                : idx === 1 
+                ? "border-sky-500/40 hover:border-sky-400" 
+                : "border-indigo-500/40 hover:border-indigo-400";
+              const tagColor = idx === 0 
+                ? "bg-amber-950/80 text-amber-300 border-amber-800" 
+                : idx === 1 
+                ? "bg-sky-950/80 text-sky-300 border-sky-800" 
+                : "bg-indigo-950/80 text-indigo-300 border-indigo-800";
+              const barColor = idx === 0 ? "bg-amber-400" : idx === 1 ? "bg-sky-400" : "bg-indigo-500";
+              const textColor = idx === 0 ? "text-amber-400" : idx === 1 ? "text-sky-400" : "text-indigo-400";
 
               return (
                 <div 
-                  key={p.id}
-                  className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-4 ${
-                    isMonthly
-                      ? "bg-[#14120D] border-amber-500/50 shadow-lg shadow-amber-500/5"
-                      : activeBooking 
-                      ? "bg-[#14101A] border-rose-500/40" 
-                      : "bg-[#0B1516] border-emerald-500/50 shadow-lg shadow-emerald-500/5"
-                  }`}
+                  key={item.property.id}
+                  className={`p-5 rounded-2xl bg-[#111726] border-2 ${borderAccent} transition-all space-y-4 flex flex-col justify-between`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-400">
-                        {p.total_rooms} {language === "bm" ? "Bilik" : "Rooms"} · {p.total_toilets ? `${p.total_toilets} ${language === "bm" ? "Toilet" : "Toilet"} · ` : ""}{p.total_bathrooms || 1} Bath
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${tagColor}`}>
+                        {item.isMonthly ? (language === "bm" ? "Sewa Bulanan" : "Monthly") : (language === "bm" ? "Sewa Harian" : "Daily")}
                       </span>
-                      {isMonthly ? (
-                        <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[11px] font-black">
-                          🏠 ROOM RENTAL
-                        </span>
-                      ) : activeBooking ? (
-                        <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[11px] font-black">
-                          🔒 {language === "bm" ? "ADA TETAMU" : "OCCUPIED"}
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] font-black animate-pulse">
-                          ✅ {language === "bm" ? "KOSONG - BOLEH SEWA" : "AVAILABLE - READY"}
-                        </span>
-                      )}
+                      <span className="text-xs font-black text-slate-400 font-mono">{sharePct}% {language === "bm" ? "bahagian" : "share"}</span>
                     </div>
-                    <h3 className="text-lg font-black text-white">{p.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{p.address || "Kemaman, Terengganu"}</p>
+
+                    <h3 className="text-base font-black text-white leading-snug">
+                      {item.property.name}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      {item.isMonthly 
+                        ? (language === "bm" ? "Rumah Belakang · Sewaan Bilik" : "Back House · Room Rental") 
+                        : `${item.property.total_rooms} ${language === "bm" ? "Bilik" : "Rooms"} · ${item.property.address?.split(",")[0] || "Terengganu"}`}
+                    </p>
                   </div>
 
-                  {isMonthly ? (
-                    <div className="p-3.5 rounded-xl bg-black/40 border border-amber-900/40 text-xs space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-amber-400 block">{t("dashboard.monthly_fixed_rate")}</span>
-                      <div className="text-xl font-black text-white">
-                        RM {p.monthly_rental_rate || 700} <span className="text-xs text-amber-300 font-normal">/ {language === "bm" ? "bulan" : "month"}</span>
+                  <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {language === "bm" ? "PENDAPATAN UNIT" : "UNIT REVENUE"}
                       </div>
-                      <div className="text-[11px] text-slate-400">
-                        {language === "bm" ? "Rumah belakang (2 bilik 1 toilet 1 bathroom)" : "Back house (2 bedrooms 1 toilet 1 bathroom)"}
-                      </div>
-                    </div>
-                  ) : activeBooking ? (
-                    <div className="p-3.5 rounded-xl bg-black/40 border border-rose-900/40 text-xs space-y-1">
-                      <div className="text-rose-200 font-bold">{language === "bm" ? "Tetamu:" : "Guest:"} {activeBooking.guest?.name || "Guest"}</div>
-                      <div className="text-slate-400 text-[11px]">
-                        {language === "bm" ? "Keluar:" : "Check-out:"} {formatDate(activeBooking.check_out)}
+                      <div className={`text-2xl font-black font-mono mt-0.5 ${textColor}`}>
+                        {formatCurrency(item.revenue)}
                       </div>
                     </div>
-                  ) : (
-                    <div className="p-3.5 rounded-xl bg-black/40 border border-emerald-900/40 text-xs space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">{t("dashboard.daily_rate_today")}</span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-emerald-400 font-bold">Direct WA:</span>
-                        <span className="text-white font-black">{formatCurrency(p.price_direct || p.base_price_per_night)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                        <span>Airbnb / Booking:</span>
-                        <span>{formatCurrency(p.price_airbnb || Math.round(p.base_price_per_night * 1.18))}</span>
-                      </div>
-                    </div>
-                  )}
 
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-mono">{language === "bm" ? "Pintu:" : "Door:"} {p.smartlock_code}</span>
-                    <Link
-                      href="/properties"
-                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
-                    >
-                      {language === "bm" ? "Butiran Unit →" : "Unit Details →"}
-                    </Link>
+                    {/* Progress Bar for Share */}
+                    <div className="space-y-1">
+                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${barColor} transition-all duration-500`}
+                          style={{ width: `${Math.max(5, sharePct)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                        <span>{language === "bm" ? "Sumbangan Hasil" : "Revenue Share"}</span>
+                        <span className="font-bold text-slate-200">{sharePct}%</span>
+                      </div>
+                    </div>
+
+                    {/* Booked Days for this Unit */}
+                    <div className="p-2.5 rounded-xl bg-black/40 border border-slate-800/80 flex items-center justify-between text-xs">
+                      <span className="text-slate-400">{language === "bm" ? "Hari Ditempah:" : "Booked Days:"}</span>
+                      <span className="text-white font-bold font-mono">
+                        {item.isMonthly 
+                          ? (language === "bm" ? "Penuh (Bulanan)" : "Full (Monthly)")
+                          : `${item.bookedNights} ${language === "bm" ? "Hari" : "Days"} (${item.bookingsCount} ${language === "bm" ? "tempahan" : "bks"})`}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* 4. Sumber Tempahan (Booking Sources) */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-[#0D121D] border border-slate-800 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black tracking-widest text-sky-400 uppercase">
+                {language === "bm" ? "SALURAN MASUK" : "CHANNELS"}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">
+                <BarChart3 className="w-5 h-5 text-sky-400" />
+                <span>{language === "bm" ? "Sumber Tempahan" : "Booking Sources"}</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {language === "bm" 
+                  ? "Pecahan platform dan sumber tempahan yang membawa tetamu masuk."
+                  : "Breakdown of platforms and booking channels bringing guests."}
+              </p>
+            </div>
+
+            <div className="text-right self-start sm:self-auto">
+              <span className="text-xs font-bold text-slate-400 block">{language === "bm" ? "Jumlah Tempahan" : "Total Bookings"}</span>
+              <span className="text-lg font-black text-white font-mono">{monthReservationsCount}</span>
+            </div>
+          </div>
+
+          {/* Segmented Channel Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs text-slate-400 font-bold">
+              <span>{language === "bm" ? "Pecahan Saluran:" : "Channel Distribution:"}</span>
+              <span>100%</span>
+            </div>
+            <div className="h-4 w-full bg-slate-900 rounded-full overflow-hidden flex p-1 gap-1 border border-slate-800">
+              <div 
+                style={{ width: `${Math.max(5, pDirect)}%` }} 
+                className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                title={`Direct WhatsApp: ${pDirect}%`} 
+              />
+              <div 
+                style={{ width: `${Math.max(5, pBooking)}%` }} 
+                className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                title={`Booking.com: ${pBooking}%`} 
+              />
+              <div 
+                style={{ width: `${Math.max(5, pAirbnb)}%` }} 
+                className="h-full bg-amber-400 rounded-full transition-all duration-500" 
+                title={`Airbnb: ${pAirbnb}%`} 
+              />
+            </div>
+          </div>
+
+          {/* 3 Clean Channel Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Channel 1: Direct WhatsApp */}
+            <div className="p-5 rounded-2xl bg-[#111726] border-2 border-emerald-500/40 hover:border-emerald-400 transition-all space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-950/80 text-emerald-300 border border-emerald-800">
+                  {language === "bm" ? "0% Komisen" : "0% Fee"}
+                </span>
+                <span className="text-lg font-black text-emerald-400 font-mono">{pDirect}%</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-1.5">
+                  <span>💬 Direct WhatsApp</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {language === "bm" ? "Tempahan terus tanpa potongan komisen OTA" : "Direct bookings without OTA commission"}
+                </p>
+              </div>
+
+              <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400">{language === "bm" ? "Jumlah Tempahan:" : "Total Bookings:"}</span>
+                <span className="text-white font-black font-mono">{directCount} {language === "bm" ? "tempahan" : "bookings"}</span>
+              </div>
+            </div>
+
+            {/* Channel 2: Booking.com */}
+            <div className="p-5 rounded-2xl bg-[#111726] border-2 border-indigo-500/40 hover:border-indigo-400 transition-all space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-950/80 text-indigo-300 border border-indigo-800">
+                  OTA Portal
+                </span>
+                <span className="text-lg font-black text-indigo-400 font-mono">{pBooking}%</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-1.5">
+                  <span>🏨 Booking.com</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {language === "bm" ? "Platform tempahan dalam talian" : "Online travel agency platform"}
+                </p>
+              </div>
+
+              <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400">{language === "bm" ? "Jumlah Tempahan:" : "Total Bookings:"}</span>
+                <span className="text-white font-black font-mono">{bookingComCount} {language === "bm" ? "tempahan" : "bookings"}</span>
+              </div>
+            </div>
+
+            {/* Channel 3: Airbnb */}
+            <div className="p-5 rounded-2xl bg-[#111726] border-2 border-amber-500/40 hover:border-amber-400 transition-all space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-950/80 text-amber-300 border border-amber-800">
+                  Global OTA
+                </span>
+                <span className="text-lg font-black text-amber-400 font-mono">{pAirbnb}%</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-1.5">
+                  <span>🏠 Airbnb</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {language === "bm" ? "Tempahan antarabangsa & domestik" : "International & domestic bookings"}
+                </p>
+              </div>
+
+              <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400">{language === "bm" ? "Jumlah Tempahan:" : "Total Bookings:"}</span>
+                <span className="text-white font-black font-mono">{airbnbCount} {language === "bm" ? "tempahan" : "bookings"}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

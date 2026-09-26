@@ -15,6 +15,7 @@ export const translations: Record<string, { bm: string; en: string }> = {
   "nav.dashboard": { bm: "Dashboard", en: "Dashboard" },
   "nav.reservations": { bm: "Tempahan", en: "Reservations" },
   "nav.calendar": { bm: "Kalendar Bilik", en: "Calendar Matrix" },
+  "nav.planner": { bm: "Planner Mak & Ayah", en: "Family Planner" },
   "nav.properties": { bm: "Bilik & Unit", en: "Rooms & Units" },
   "nav.guests": { bm: "Tetamu", en: "Guests" },
   "nav.whatsapp": { bm: "WhatsApp & Invois", en: "WhatsApp & Invoicing" },
